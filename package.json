@@ -1,7 +1,10 @@
 {
   "name": "banyan",
-  "version": "0.1.0",
-  "private": true,
+  "version": "0.0.1",
+  "repository":{
+    "type" : "git",
+    "url" : "git@github.com:santanubasu/banyan.git"
+  },
   "dependencies": {
     "underscore":"1.8.2",
     "jquery":"2.1.x",
