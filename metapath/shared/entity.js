@@ -1,6 +1,6 @@
 var _ = require("underscore");
 var Observe = require("observe-js");
-var Config = require("metapath:///banyan/config.js");
+var Config = require("metapath:///banyan/shared/config.js");
 
 var isEntity = module.exports.isEntity = function (object) {
     return (_.isObject(object)) && (Config.idKey in object) && (Config.metaKey in object) && (Config.resourceKey in object[Config.metaKey]);
@@ -74,5 +74,13 @@ var joinPath = module.exports.joinPath = function(root, suffix) {
         return root+"."+suffix;
     }
 }
+
+var createOperation = module.exports.createOperation = function(entity, options) {
+    var operation = {};
+    operation.delta = _.pick(entity, Config.idKey);
+    operation.delta[Config.metaKey] = _.pick(entity[Config.metaKey], Config.resourceKey, Config.versionKey);
+    return operation;
+}
+
 
 

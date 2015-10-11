@@ -41,6 +41,15 @@ module.exports = Object.extend({
         this.queue.push(item);
     },
 
+    dequeueAll:function() {
+        // if the queue is empty, return immediately
+        if (this.queue.length == 0) return undefined;
+        var items = this.queue.slice(0).reverse();
+        this.offset = 0;
+        this.queue = [];
+        return items;
+    },
+
     /* Dequeues an item and returns it. If the queue is empty, the value
      * 'undefined' is returned.
      */
