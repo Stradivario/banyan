@@ -16,7 +16,6 @@
     "through":"2.3.8",
     "eventemitter2":"0.4.14",
     "q":"0.9.6",
-    "metapath":"git@github.com:santanubasu/metapath.git",
     "node-polyfill":"git@github.com:santanubasu/node-polyfill.git"
   }
 }

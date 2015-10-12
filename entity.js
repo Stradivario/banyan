@@ -1,6 +1,6 @@
 var _ = require("underscore");
 var Observe = require("observe-js");
-var Config = require("metapath:///banyan/shared/config.js");
+var Config = require("./config.js");
 
 var isEntity = module.exports.isEntity = function (object) {
     return (_.isObject(object)) && (Config.idKey in object) && (Config.metaKey in object) && (Config.resourceKey in object[Config.metaKey]);
