@@ -194,7 +194,7 @@ var Store = Object.extend({
         }
         return trackedEntity;
     },
-    ensureEntity:function(resource, id, options) {
+    fetch:function(resource, id, options) {
         var guid = Entity.createGuid(resource, id);
         var entity;
         if (guid in this.graph) {
@@ -204,7 +204,7 @@ var Store = Object.extend({
             var entity = Entity.buildEntityProxy(resource, id);
             this.track(entity);
         }
-        if (options.fetch) {
+        if (options.force) {
             var operation = Entity.createEntityOperation(instance);
             dispatcher.queueOutbound(operation);
             dispatcher.flushOutbound();
