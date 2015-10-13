@@ -7,7 +7,11 @@ var isEntity = module.exports.isEntity = function (object) {
 }
 
 var getGuid = module.exports.getGuid = function (entity) {
-    return entity[Config.metaKey][Config.resourceKey] + "/" + entity[Config.idKey];
+    return createGuid(entity[Config.metaKey][Config.resourceKey], entity[Config.idKey]);
+}
+
+var createGuid = module.exports.createGuid = function(resource, id) {
+    return resource+"/"+id;
 }
 
 var getVersion = module.exports.getVersion = function (entity) {
@@ -22,20 +26,20 @@ var getId = module.exports.getId = function (entity) {
     return entity[Config.idKey];
 }
 
-var buildEntity = module.exports.buildEntity = function(resource, id) {
-    var entity = {};
-    entity[config.idKey] = id;
-    entity[config.metaKey] = {};
-    entity[config.metaKey][config.resourceKey] = resource;
-    return entity;
+var buildEntityProxy = module.exports.buildEntityProxy = function(resource, id) {
+    var entityProxy = {};
+    entityProxy[config.idKey] = id;
+    entityProxy[config.metaKey] = {};
+    entityProxy[config.metaKey][config.resourceKey] = resource;
+    return entityProxy;
 }
 
-var getIdentityProxy = module.exports.getIdentityProxy = function (entity) {
-    var identityProxy = {};
+var getEntityProxy = module.exports.getEntityProxy = function (entity) {
+    var entityProxy = {};
     if (isEntity(entity)) {
-        identityProxy[Config.idKey] = entity[Config.idKey];
-        identityProxy[Config.metaKey] = _.pick(entity[Config.metaKey], Config.versionKey, Config.resourceKey)
-        return identityProxy;
+        entityProxy[Config.idKey] = entity[Config.idKey];
+        entityProxy[Config.metaKey] = _.pick(entity[Config.metaKey], Config.versionKey, Config.resourceKey)
+        return entityProxy;
     }
     else {
         return undefined;

@@ -67,7 +67,7 @@ var Store = Object.extend({
             var add = function(value, key) {
                 var extendedPath = Entity.joinPath(path, key);
                 if (Entity.isEntity(value)) {
-                    operation.delta[extendedPath] = Entity.getIdentityProxy(value);
+                    operation.delta[extendedPath] = Entity.getEntityProxy(value);
                 }
                 else {
                     operation.delta[extendedPath] = value;
@@ -79,7 +79,7 @@ var Store = Object.extend({
                 var oldValue = getOldValue(key);
                 this.destroyObservers(oldValue);
                 if (Entity.isEntity(value)) {
-                    operation.delta[extendedPath] = Entity.getIdentityProxy(value);
+                    operation.delta[extendedPath] = Entity.getEntityProxy(value);
                 }
                 else {
                     operation.delta[extendedPath] = value;
@@ -123,7 +123,7 @@ var Store = Object.extend({
                     removed.length,
                     added.map(function(element, offset) {
                         if (Entity.isEntity(element)) {
-                            return Entity.getIdentityProxy(element);
+                            return Entity.getEntityProxy(element);
                         }
                         else {
                             this.buildObservers(entity, path+"["+(index+offset)+"]");
@@ -161,7 +161,7 @@ var Store = Object.extend({
                     var removedCount = splice[1];
                     var addedValues = splice[2].map(function(addedValue) {
                         if (Entity.isEntity(addedValue)) {
-                            return this.upgradeIdentityProxy(addedValue);
+                            return this.upgradeEntityProxy(addedValue);
                         }
                         else {
                             return addedValue;
@@ -176,7 +176,7 @@ var Store = Object.extend({
                 }
                 else {
                     if (Entity.isEntity(value)) {
-                        Entity.setValueAtPath(entity, key, this.upgradeIdentityProxy(value));
+                        Entity.setValueAtPath(entity, key, this.upgradeEntityProxy(value));
                     }
                     else {
                         Entity.setValueAtPath(entity, key, value);
@@ -185,14 +185,25 @@ var Store = Object.extend({
             }
         }
     },
-    upgradeIdentityProxy:function(identityProxy, options) {
-        var guid = Entity.getGuid(identityProxy);
+    upgradeEntityProxy:function(entityProxy, options) {
+        var guid = Entity.getGuid(entityProxy);
         var trackedEntity = this.graph[guid];
         if (!trackedEntity) {
-            trackedEntity = identityProxy;
+            trackedEntity = entityProxy;
             this.graph[guid] = trackedEntity;
         }
         return trackedEntity;
+    },
+    ensureEntity:function(resource, id) {
+        var guid = Entity.createGuid(resource, id);
+        if (guid in this.graph) {
+            return this.graph[guid]
+        }
+        else {
+            var entityProxy = Entity.buildEntityProxy(resource, id);
+            this.track(entityProxy);
+            return entityProxy;
+        }
     },
     track:function(entity, options) {
         if (!Entity.isEntity(entity)) {
@@ -228,6 +239,7 @@ var Store = Object.extend({
         this.consumers[guid].destroy();
         delete this.consumers[guid];
     },
+
     consumeOperation:function(operation, options) {
 
     }
