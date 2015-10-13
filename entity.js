@@ -87,12 +87,18 @@ var joinPath = module.exports.joinPath = function(root, suffix) {
     }
 }
 
-var createOperation = module.exports.createOperation = function(entity, options) {
+var createDeltaOperation = module.exports.createDeltaOperation = function(entity, options) {
     var operation = {};
     operation.delta = _.pick(entity, Config.idKey);
     operation.delta[Config.metaKey] = _.pick(entity[Config.metaKey], Config.resourceKey, Config.versionKey);
     return operation;
 }
 
+var createEntityOperation = module.exports.createEntityOperation = function(entity, options) {
+    var operation = {
+        entity:entity
+    };
+    return operation;
+}
 
 

@@ -63,7 +63,7 @@ var Store = Object.extend({
         var object = Entity.getValueAtPath(entity, path);
         var observer = new Observe.ObjectObserver(object);
         observer.open(function(added, removed, changed, getOldValue) {
-            var operation = Entity.createOperation(entity);
+            var operation = Entity.createDeltaOperation(entity);
             var add = function(value, key) {
                 var extendedPath = Entity.joinPath(path, key);
                 if (Entity.isEntity(value)) {
@@ -106,7 +106,7 @@ var Store = Object.extend({
         var array = Entity.getValueAtPath(entity, path);
         var observer = new Observe.ArrayObserver(array);
         observer.open(function(splices) {
-            var operation = Entity.createOperation(entity);
+            var operation = Entity.createDeltaOperation(entity);
             operation.delta[path] = splices.map(function(splice) {
                 var index = splice.index;
                 var removed = splice.removed;
@@ -194,16 +194,22 @@ var Store = Object.extend({
         }
         return trackedEntity;
     },
-    ensureEntity:function(resource, id) {
+    ensureEntity:function(resource, id, options) {
         var guid = Entity.createGuid(resource, id);
+        var entity;
         if (guid in this.graph) {
-            return this.graph[guid]
+            entity = this.graph[guid]
         }
         else {
-            var entityProxy = Entity.buildEntityProxy(resource, id);
-            this.track(entityProxy);
-            return entityProxy;
+            var entity = Entity.buildEntityProxy(resource, id);
+            this.track(entity);
         }
+        if (options.fetch) {
+            var operation = Entity.createEntityOperation(instance);
+            dispatcher.queueOutbound(operation);
+            dispatcher.flushOutbound();
+        }
+        return entity;
     },
     track:function(entity, options) {
         if (!Entity.isEntity(entity)) {
