@@ -22,6 +22,14 @@ var getId = module.exports.getId = function (entity) {
     return entity[Config.idKey];
 }
 
+var buildEntity = module.exports.buildEntity = function(resource, id) {
+    var entity = {};
+    entity[config.idKey] = id;
+    entity[config.metaKey] = {};
+    entity[config.metaKey][config.resourceKey] = resource;
+    return entity;
+}
+
 var getIdentityProxy = module.exports.getIdentityProxy = function (entity) {
     var identityProxy = {};
     if (isEntity(entity)) {
