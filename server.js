@@ -17,8 +17,25 @@ var Repository = Object.extend({
         }
         this.resources[resource.name] = resource;
     },
-    consumeOperation:function(operation, options) {
-
+    fetch:function(data, options) {
+        var Resource = this.resources[data[Config.metaKey][Config.resourceKey]];
+        if (Resource) {
+            return Resource.fetch(data);
+        }
+        else {
+            // TODO construct an error object inside the metadata of the resposne entity, which should have the same
+            // resource and id as the data
+        }
+    },
+    patch:function(data, options) {
+        var Resource = this.resources[data[Config.metaKey][Config.resourceKey]];
+        if (Resource) {
+            return Resource.patch(data);
+        }
+        else {
+            // TODO construct an error object inside the metadata of the resposne entity, which should have the same
+            // resource and id as the data
+        }
     }
 })
 
@@ -28,11 +45,16 @@ var Dispatcher = Object.extend({
     initialize:function(options) {
         return this;
     },
-    route:function(data, options) {
-        var operations = data.operations;
+    route:function(operations, options) {
+        var operations = operations;
         return q
             .all(operations.map(function(operation) {
-                return repository.consumeOperation(operation);
+                if (operation.fetch) {
+                    return repository.fetch(operation.fetch);
+                }
+                else if (operation.patch) {
+                    return repository.patch(operation.patch);
+                }
             }.bind(this)))
             .then(function(results) {
                 return _.flatten(results);

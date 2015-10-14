@@ -1,8 +1,8 @@
 module.exports = {
     idKey: "id",
     metaKey: "_m",
-    versionKey: "_version",
-    resourceKey: "_resource",
-    observerKey:"_observer",
+    versionKey: "_v",
+    resourceKey: "_r",
+    observerKey:"_o",
     deletionToken: null
 }

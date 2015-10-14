@@ -16,7 +16,7 @@ var Store = Object.extend({
         var target = Entity.getValueAtPath(entity, path);
         if (_.isArray(target)) {
             var metadata = Entity.getOrCreateValueAtPath(target, Config.metaKey, {});
-            metadata[Config.observerKey] = this.buildArrayObserver(path);
+            metadata[Config.observerKey] = this.buildArrayObserver(entity, path);
             target.forEach(function(element, index) {
                 this.buildObservers(entity, extendedPath+"["+index+"]");
             }.bind(this))
@@ -26,7 +26,7 @@ var Store = Object.extend({
                 return;
             }
             var metadata = Entity.getOrCreateValueAtPath(target, Config.metaKey, {});
-            metadata[Config.observerKey] = this.buildObjectObserver(path);
+            metadata[Config.observerKey] = this.buildObjectObserver(entity, path);
             for (var key in target) {
                 if (key===Config.idKey||key===Config.metaKey) {
                     continue;
@@ -63,14 +63,14 @@ var Store = Object.extend({
         var object = Entity.getValueAtPath(entity, path);
         var observer = new Observe.ObjectObserver(object);
         observer.open(function(added, removed, changed, getOldValue) {
-            var operation = Entity.createDeltaOperation(entity);
+            var operation = Entity.createPatchOperation(entity);
             var add = function(value, key) {
                 var extendedPath = Entity.joinPath(path, key);
                 if (Entity.isEntity(value)) {
-                    operation.delta[extendedPath] = Entity.getEntityProxy(value);
+                    operation.patch[extendedPath] = Entity.getEntityProxy(value);
                 }
                 else {
-                    operation.delta[extendedPath] = value;
+                    operation.patch[extendedPath] = value;
                     this.buildObservers(entity, extendedPath);
                 }
             }.bind(this);
@@ -79,10 +79,10 @@ var Store = Object.extend({
                 var oldValue = getOldValue(key);
                 this.destroyObservers(oldValue);
                 if (Entity.isEntity(value)) {
-                    operation.delta[extendedPath] = Entity.getEntityProxy(value);
+                    operation.patch[extendedPath] = Entity.getEntityProxy(value);
                 }
                 else {
-                    operation.delta[extendedPath] = value;
+                    operation.patch[extendedPath] = value;
                     this.buildObservers(entity, extendedPath);
                 }
             }.bind(this);
@@ -90,14 +90,13 @@ var Store = Object.extend({
                 var extendedPath = Entity.joinPath(path, key);
                 var oldValue = getOldValue(key);
                 this.destroyObservers(oldValue);
-                operation.delta[extendedPath] = Config.deletionToken;
+                operation.patch[extendedPath] = Config.deletionToken;
             }.bind(this);
 
             _.each(added, add);
             _.each(changed, change);
             _.each(removed, remove);
 
-            console.log(JSON.stringify(operation, jsonReplacer, 4));
             dispatcher.queueOutbound(operation);
         }.bind(this));
         return observer;
@@ -106,8 +105,8 @@ var Store = Object.extend({
         var array = Entity.getValueAtPath(entity, path);
         var observer = new Observe.ArrayObserver(array);
         observer.open(function(splices) {
-            var operation = Entity.createDeltaOperation(entity);
-            operation.delta[path] = splices.map(function(splice) {
+            var operation = Entity.createPatchOperation(entity);
+            operation.patch[path] = splices.map(function(splice) {
                 var index = splice.index;
                 var removed = splice.removed;
                 var added = array.slice(index, index+splice.addedCount);
@@ -132,29 +131,28 @@ var Store = Object.extend({
                     }.bind(this))
                 ]
             }.bind(this))
-            console.log(JSON.stringify(operation, jsonReplacer, 4));
             dispatcher.queueOutbound(operation);
         }.bind(this));
         return observer;
     },
-    applyDelta:function(delta, options) {
-        var guid = Entity.getGuid(delta);
+    applyPatch:function(patch, options) {
+        var guid = Entity.getGuid(patch);
         if (!guid) {
-            throw "Cannot apply delta because a guid could not be determined.";
+            throw "Cannot apply patch because a guid could not be determined.";
         }
         var entity = this.graph[guid];
         if (!entity) {
-            throw "Cannot apply delta because a baseline entity was not found.";
+            throw "Cannot apply patch because a baseline entity was not found.";
         }
-        if (Entity.getVersion(delta)!==Entity.getVersion(entity)) {
-            throw "Cannot apply delta because delta and entity versions are not compatible.";
+        if (Entity.getVersion(patch)!==Entity.getVersion(entity)) {
+            throw "Cannot apply patch because patch and entity versions are not compatible.";
         }
-        for (var key in delta) {
+        for (var key in patch) {
             if (key===Config.idKey||key===Config.metaKey) {
                 continue;
             }
             var path = Observe.Path.get(key);
-            var value = delta[key];
+            var value = patch[key];
             if (_.isArray(value)) {
                 value.forEach(function(splice) {
                     var index = splice[0];
@@ -205,7 +203,10 @@ var Store = Object.extend({
             this.track(entity);
         }
         if (options.force) {
-            var operation = Entity.createEntityOperation(instance);
+            var operation = Entity.createFetchOperation(resource);
+            operation.fetch.query = {
+                id:id
+            }
             dispatcher.queueOutbound(operation);
             dispatcher.flushOutbound();
         }
@@ -226,9 +227,6 @@ var Store = Object.extend({
         }
         this.graph[guid] = entity;
         this.buildObservers(entity, "");
-        this.consumers[guid] = OperationConsumer.new({
-            entity:entity
-        });
     },
     untrack:function(entity, options) {
         if (!Entity.isEntity(entity)) {
@@ -241,23 +239,26 @@ var Store = Object.extend({
         }
         this.destroyObservers(entity);
         delete this.graph[guid];
-
-        this.consumers[guid].destroy();
-        delete this.consumers[guid];
     },
-
     consumeOperation:function(operation, options) {
+        if (operation.patch) {
+            this.applyPatch(operation.patch);
+        }
+        else if (operation.entity) {
 
+        }
     }
 })
 var store = module.exports.store = Store.new();
 
 var Dispatcher = Object.extend({
     initialize:function(options) {
-        this.endpoint = options.endpoint;
         this.inQueue = Queue.new();
         this.outQueue = Queue.new();
         return this;
+    },
+    setEndpoint:function(endpoint) {
+        this.endpoint = endpoint;
     },
     queueOutbound:function(operation, options) {
         this.outQueue.enqueue(operation);
@@ -271,7 +272,7 @@ var Dispatcher = Object.extend({
             .ajax({
                 url:this.endpoint,
                 type:"POST",
-                data:operations,
+                data:JSON.stringify(operations),
                 dataType:"json",
                 contentType:"application/json"
             })

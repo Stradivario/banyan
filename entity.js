@@ -28,9 +28,9 @@ var getId = module.exports.getId = function (entity) {
 
 var buildEntityProxy = module.exports.buildEntityProxy = function(resource, id) {
     var entityProxy = {};
-    entityProxy[config.idKey] = id;
-    entityProxy[config.metaKey] = {};
-    entityProxy[config.metaKey][config.resourceKey] = resource;
+    entityProxy[Config.idKey] = id;
+    entityProxy[Config.metaKey] = {};
+    entityProxy[Config.metaKey][Config.resourceKey] = resource;
     return entityProxy;
 }
 
@@ -87,17 +87,19 @@ var joinPath = module.exports.joinPath = function(root, suffix) {
     }
 }
 
-var createDeltaOperation = module.exports.createDeltaOperation = function(entity, options) {
+var createPatchOperation = module.exports.createPatchOperation = function(entity, options) {
     var operation = {};
-    operation.delta = _.pick(entity, Config.idKey);
-    operation.delta[Config.metaKey] = _.pick(entity[Config.metaKey], Config.resourceKey, Config.versionKey);
+    operation.patch = _.pick(entity, Config.idKey);
+    operation.patch[Config.metaKey] = _.pick(entity[Config.metaKey], Config.resourceKey, Config.versionKey);
     return operation;
 }
 
-var createEntityOperation = module.exports.createEntityOperation = function(entity, options) {
+var createFetchOperation = module.exports.createFetchOperation = function(resource, options) {
     var operation = {
-        entity:entity
+        fetch:{}
     };
+    operation.fetch[Config.metaKey] = {};
+    operation.fetch[Config.metaKey][Config.resourceKey] = resource;
     return operation;
 }
 
