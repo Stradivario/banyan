@@ -1,6 +1,13 @@
 var _ = require("underscore");
 var Observe = require("observe-js");
+var ObjectPath = require("object-path");
 var Config = require("./config.js");
+
+var arrayPathPattern = /[\[\]]]/g;
+
+var toObjectPath = module.exports.toObjectPath = function(observePath) {
+    return observePath.replace(arrayPathPattern, ".");
+}
 
 var isEntity = module.exports.isEntity = function (object) {
     return (_.isObject(object)) && (Config.idKey in object) && (Config.metaKey in object) && (Config.resourceKey in object[Config.metaKey]);
@@ -60,10 +67,11 @@ var getOrCreateValueAtPath = module.exports.getOrCreateValueAtPath = function(en
         return entity
     }
     else {
-        var value = Observe.Path.get(path).getValueFrom(entity);
+        var objectPath = toObjectPath(path);
+        var value = ObjectPath.get(entity, objectPath);
         if (_.isUndefined(value)) {
             value = defaultValue;
-            Observe.Path.get(path).setValueFrom(entity, value);
+            ObjectPath.set(entity, objectPath, value)
         }
         return value;
     }
@@ -74,7 +82,7 @@ var setValueAtPath = module.exports.setValueAtPath = function(entity, path, valu
         return;
     }
     else {
-        Observe.Path.get(path).setValueFrom(entity, value);
+        ObjectPath.set(entity, toObjectPath(path), value);
     }
 }
 
