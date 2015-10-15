@@ -12,10 +12,10 @@ var Repository = Object.extend({
         return this;
     },
     registerResource:function(resource, options) {
-        if (resource.name in this.resources) {
-            throw "Cannot register a resource under the name "+resource.name+" because this name already exists in the resource registry."
+        if (resource.resourceName in this.resources) {
+            throw "Cannot register a resource under the name "+resource.resourceName+" because this name already exists in the resource registry."
         }
-        this.resources[resource.name] = resource;
+        this.resources[resource.resourceName] = resource;
     },
     fetch:function(data, options) {
         var Resource = this.resources[data[Config.metaKey][Config.resourceKey]];
