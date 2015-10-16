@@ -135,6 +135,7 @@ var Store = Object.extend({
         }.bind(this));
         return observer;
     },
+    // TODO need to avoid queueing an outbound operation as a result of applying a patch that just came in.
     applyPatch:function(patch, options) {
         var guid = Entity.getGuid(patch);
         if (!guid) {
@@ -144,9 +145,11 @@ var Store = Object.extend({
         if (!entity) {
             throw "Cannot apply patch because a baseline entity was not found.";
         }
-        if (Entity.getVersion(patch)!==Entity.getVersion(entity)) {
+        var patchMode = Entity.getPatchMode(entity, patch);
+        if (patchMode===Entity.PATCH_MODE_NONE) {
             throw "Cannot apply patch because patch and entity versions are not compatible.";
         }
+        // TODO the replace patch mode is probably not implemented correctly below
         for (var key in patch) {
             if (key===Config.idKey||key===Config.metaKey) {
                 continue;
@@ -272,7 +275,7 @@ var Dispatcher = Object.extend({
             .ajax({
                 url:this.endpoint,
                 type:"POST",
-                data:JSON.stringify(operations),
+                data:JSON.stringify(operations, Entity.operationReplacer),
                 dataType:"json",
                 contentType:"application/json"
             })
@@ -280,6 +283,7 @@ var Dispatcher = Object.extend({
                 data.forEach(function(operation, index) {
                     this.queueInbound(operation);
                 }.bind(this))
+                this.flushInbound();
             }.bind(this))
     },
     flushInbound:function(options) {

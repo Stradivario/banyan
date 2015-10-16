@@ -111,4 +111,27 @@ var createFetchOperation = module.exports.createFetchOperation = function(resour
     return operation;
 }
 
+var PATCH_MODE_NONE = module.exports.PATCH_MODE_NONE = 0;
+var PATCH_MODE_MERGE = module.exports.PATCH_MODE_MERGE = 1;
+var PATCH_MODE_REPLACE = module.exports.PATCH_MODE_REPLACE = 2;
 
+var getPatchMode = module.exports.getPatchMode = function(entity, patch) {
+    if (!patch[Config.metaKey]||!patch[Config.metaKey][Config.versionKey]) {
+        return PATCH_MODE_NONE;
+    }
+    if (!entity[Config.metaKey]||!entity[Config.metaKey][Config.versionKey]) {
+        return PATCH_MODE_REPLACE;
+    }
+    if (entity[Config.metaKey][Config.versionKey]===patch[Config.metaKey][Config.versionKey]) {
+        return PATCH_MODE_MERGE;
+    }
+}
+
+var operationReplacer = module.exports.operationReplacer = function(key, value) {
+    if (key===Config.metaKey) {
+        return _.pick(value, Config.resourceKey, Config.versionKey);
+    }
+    else {
+        return value;
+    }
+}
