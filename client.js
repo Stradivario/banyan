@@ -36,6 +36,30 @@ var Store = Object.extend({
             }
         }
     },
+    // TODO see if there is some way to combine the logic for discardObservations and destroyObservers
+    discardObservations:function(root, options) {
+        if (!_.isObject(root)) {
+            return;
+        }
+        if (_.isArray(root)) {
+            if ((Config.metaKey in root)&&(Config.observerKey in root[Config.metaKey])) {
+                root[Config.metaKey][Config.observerKey].discardChanges();
+            }
+            root.forEach(function(element) {
+                this.discardObservations(element);
+            }.bind(this))
+        }
+        else {
+            for (var key in root) {
+                if ((Config.metaKey===key)&&(Config.observerKey in root[Config.metaKey])) {
+                    root[Config.metaKey][Config.observerKey].discardChanges();
+                }
+                else {
+                    this.discardObservations(root[key]);
+                }
+            }
+        }
+    },
     destroyObservers:function(root, options) {
         if (!_.isObject(root)) {
             return;
@@ -43,6 +67,7 @@ var Store = Object.extend({
         if (_.isArray(root)) {
             if ((Config.metaKey in root)&&(Config.observerKey in root[Config.metaKey])) {
                 root[Config.metaKey][Config.observerKey].close();
+                delete root[Config.metaKey][Config.observerKey];
             }
             root.forEach(function(element) {
                 this.destroyObservers(element);
@@ -52,6 +77,7 @@ var Store = Object.extend({
             for (var key in root) {
                 if ((Config.metaKey===key)&&(Config.observerKey in root[Config.metaKey])) {
                     root[Config.metaKey][Config.observerKey].close();
+                    delete root[Config.metaKey][Config.observerKey];
                 }
                 else {
                     this.destroyObservers(root[key]);
@@ -185,6 +211,7 @@ var Store = Object.extend({
                 }
             }
         }
+        this.discardObservations(entity);
     },
     upgradeEntityProxy:function(entityProxy, options) {
         var guid = Entity.getGuid(entityProxy);
