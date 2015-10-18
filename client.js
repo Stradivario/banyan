@@ -36,54 +36,38 @@ var Store = Object.extend({
             }
         }
     },
-    // TODO see if there is some way to combine the logic for discardObservations and destroyObservers
-    discardObservations:function(root, options) {
+    forEachObserver:function(root, fn, options) {
         if (!_.isObject(root)) {
             return;
         }
         if (_.isArray(root)) {
             if ((Config.metaKey in root)&&(Config.observerKey in root[Config.metaKey])) {
-                root[Config.metaKey][Config.observerKey].discardChanges();
+                fn(root[Config.metaKey][Config.observerKey]);
             }
             root.forEach(function(element) {
-                this.discardObservations(element);
+                this.forEachObserver(element, fn, options);
             }.bind(this))
         }
         else {
             for (var key in root) {
                 if ((Config.metaKey===key)&&(Config.observerKey in root[Config.metaKey])) {
-                    root[Config.metaKey][Config.observerKey].discardChanges();
+                    fn(root[Config.metaKey][Config.observerKey]);
                 }
                 else {
-                    this.discardObservations(root[key]);
+                    this.forEachObserver(root[key], fn, options);
                 }
             }
         }
     },
-    destroyObservers:function(root, options) {
-        if (!_.isObject(root)) {
-            return;
-        }
-        if (_.isArray(root)) {
-            if ((Config.metaKey in root)&&(Config.observerKey in root[Config.metaKey])) {
-                root[Config.metaKey][Config.observerKey].close();
-                delete root[Config.metaKey][Config.observerKey];
-            }
-            root.forEach(function(element) {
-                this.destroyObservers(element);
-            }.bind(this))
-        }
-        else {
-            for (var key in root) {
-                if ((Config.metaKey===key)&&(Config.observerKey in root[Config.metaKey])) {
-                    root[Config.metaKey][Config.observerKey].close();
-                    delete root[Config.metaKey][Config.observerKey];
-                }
-                else {
-                    this.destroyObservers(root[key]);
-                }
-            }
-        }
+    discardObservations:function(root, options) {
+        this.forEachObserver(root, function(observer) {
+            observer.discardChanges();
+        })
+    },
+    closeObservers:function(root, options) {
+        this.forEachObserver(root, function(observer) {
+            observer.close();
+        })
     },
     buildObjectObserver:function(entity, path, options) {
         var object = Entity.getValueAtPath(entity, path);
@@ -103,7 +87,7 @@ var Store = Object.extend({
             var change = function(value, key) {
                 var extendedPath = Entity.joinPath(path, key);
                 var oldValue = getOldValue(key);
-                this.destroyObservers(oldValue);
+                this.closeObservers(oldValue);
                 if (Entity.isEntity(value)) {
                     operation.patch[extendedPath] = Entity.getEntityProxy(value);
                 }
@@ -115,7 +99,7 @@ var Store = Object.extend({
             var remove = function(value, key) {
                 var extendedPath = Entity.joinPath(path, key);
                 var oldValue = getOldValue(key);
-                this.destroyObservers(oldValue);
+                this.closeObservers(oldValue);
                 operation.patch[extendedPath] = Config.deletionToken;
             }.bind(this);
 
@@ -140,7 +124,7 @@ var Store = Object.extend({
                     if (Entity.isEntity(element)) {
                     }
                     else {
-                        this.destroyObservers(element);
+                        this.closeObservers(element);
                     }
                 }.bind(this))
                 return [
@@ -161,7 +145,6 @@ var Store = Object.extend({
         }.bind(this));
         return observer;
     },
-    // TODO need to avoid queueing an outbound operation as a result of applying a patch that just came in.
     applyPatch:function(patch, options) {
         var guid = Entity.getGuid(patch);
         if (!guid) {
@@ -267,7 +250,7 @@ var Store = Object.extend({
             console.log("Attempted to untrack an entity with GUID "+guid+" that is not being tracked.");
             return;
         }
-        this.destroyObservers(entity);
+        this.closeObservers(entity);
         delete this.graph[guid];
     },
     consumeOperation:function(operation, options) {
