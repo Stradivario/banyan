@@ -5,7 +5,10 @@ var $ = require("jquery");
 var Observe = require("observe-js");
 var Queue = require("./queue.js");
 var Entity = require("./entity.js");
+var Resource = require("./resource.js");
 var Config = require("./config.js");
+var Traverse = require("traverse");
+var extend = require("node.extend");
 
 var Store = Object.extend({
     initialize:function(options) {
@@ -36,37 +39,18 @@ var Store = Object.extend({
             }
         }
     },
-    forEachObserver:function(root, fn, options) {
-        if (!_.isObject(root)) {
-            return;
-        }
-        if (_.isArray(root)) {
-            if ((Config.metaKey in root)&&(Config.observerKey in root[Config.metaKey])) {
-                fn(root[Config.metaKey][Config.observerKey]);
-            }
-            root.forEach(function(element) {
-                this.forEachObserver(element, fn, options);
-            }.bind(this))
-        }
-        else {
-            for (var key in root) {
-                if ((Config.metaKey===key)&&(Config.observerKey in root[Config.metaKey])) {
-                    fn(root[Config.metaKey][Config.observerKey]);
-                }
-                else {
-                    this.forEachObserver(root[key], fn, options);
-                }
-            }
-        }
-    },
     discardObservations:function(root, options) {
-        this.forEachObserver(root, function(observer) {
-            observer.discardChanges();
+        Traverse(root).forEach(function(value) {
+            if (this.key===Config.observerKey) {
+                value.discardChanges();
+            }
         })
     },
     closeObservers:function(root, options) {
-        this.forEachObserver(root, function(observer) {
-            observer.close();
+        Traverse(root).forEach(function(value) {
+            if (this.key===Config.observerKey) {
+                value.close();
+            }
         })
     },
     buildObjectObserver:function(entity, path, options) {
@@ -145,6 +129,19 @@ var Store = Object.extend({
         }.bind(this));
         return observer;
     },
+    strip:function(root, options) {
+        Traverse(root).forEach(function(value) {
+            if (this.isRoot) {
+                return;
+            }
+            else if (this.key===Config.observerKey) {
+                this.remove();
+            }
+            else if (Entity.isEntity(value)||!(_.isObject(value))) {
+                this.remove();
+            }
+        })
+    },
     applyPatch:function(patch, options) {
         var guid = Entity.getGuid(patch);
         if (!guid) {
@@ -158,7 +155,13 @@ var Store = Object.extend({
         if (patchMode===Entity.PATCH_MODE_NONE) {
             throw "Cannot apply patch because patch and entity versions are not compatible.";
         }
-        // TODO the replace patch mode is probably not implemented correctly below
+        else if (patchMode===Entity.PATCH_MODE_REPLACE) {
+            this.strip(entity);
+            var resource = Resource.lookup(Entity.getResource(entity));
+            if (resource) {
+                extend(true, entity, resource.template);
+            }
+        }
         for (var key in patch) {
             if (key===Config.idKey||key===Config.metaKey) {
                 continue;
@@ -184,13 +187,16 @@ var Store = Object.extend({
                 if (value===Config.deletionToken) {
                     Entity.setValueAtPath(entity, key, undefined);
                 }
-                else {
+                else if (_.isObject(value)) {
                     if (Entity.isEntity(value)) {
                         Entity.setValueAtPath(entity, key, this.upgradeEntityProxy(value));
                     }
                     else {
-                        Entity.setValueAtPath(entity, key, value);
+                        extend(true, Entity.getOrCreateValueAtPath(entity, key, {}), value);
                     }
+                }
+                else {
+                    Entity.setValueAtPath(entity, key, value);
                 }
             }
         }
@@ -205,18 +211,22 @@ var Store = Object.extend({
         }
         return trackedEntity;
     },
-    fetch:function(resource, id, options) {
-        var guid = Entity.createGuid(resource, id);
+    fetch:function(resourceName, id, options) {
+        var guid = Entity.createGuid(resourceName, id);
         var entity;
         if (guid in this.graph) {
             entity = this.graph[guid]
         }
         else {
-            var entity = Entity.buildEntityProxy(resource, id);
+            var entity = Entity.buildEntityProxy(resourceName, id);
+            var resource = Resource.lookup(resourceName);
+            if (resource) {
+                extend(true, entity, resource.template);
+            }
             this.track(entity);
         }
         if (options.force) {
-            var operation = Entity.createFetchOperation(resource);
+            var operation = Entity.createFetchOperation(resourceName);
             operation.fetch.query = {
                 id:id
             }

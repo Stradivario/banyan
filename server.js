@@ -4,23 +4,17 @@ var _ = require("underscore");
 var q = require("q");
 var Queue = require("./queue.js");
 var Entity = require("./entity.js");
+var Resource = require("./resource.js");
 var Config = require("./config.js");
 
 var Repository = Object.extend({
     initialize:function(options) {
-        this.resources = {};
         return this;
     },
-    registerResource:function(resource, options) {
-        if (resource.resourceName in this.resources) {
-            throw "Cannot register a resource under the name "+resource.resourceName+" because this name already exists in the resource registry."
-        }
-        this.resources[resource.resourceName] = resource;
-    },
     fetch:function(data, options) {
-        var Resource = this.resources[data[Config.metaKey][Config.resourceKey]];
-        if (Resource) {
-            return Resource.fetch(data);
+        var registeredResource = Resource.lookup(data[Config.metaKey][Config.resourceKey]);
+        if (registeredResource) {
+            return registeredResource.fetch(data);
         }
         else {
             // TODO construct an error object inside the metadata of the resposne entity, which should have the same
@@ -28,9 +22,9 @@ var Repository = Object.extend({
         }
     },
     patch:function(data, options) {
-        var Resource = this.resources[data[Config.metaKey][Config.resourceKey]];
-        if (Resource) {
-            return Resource.patch(data);
+        var registeredResource = Resource.lookup(data[Config.metaKey][Config.resourceKey]);
+        if (registeredResource) {
+            return registeredResource.patch(data);
         }
         else {
             // TODO construct an error object inside the metadata of the resposne entity, which should have the same
