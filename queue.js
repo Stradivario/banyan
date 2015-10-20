@@ -43,7 +43,7 @@ module.exports = Object.extend({
 
     dequeueAll:function() {
         // if the queue is empty, return immediately
-        if (this.queue.length == 0) return undefined;
+        if (this.queue.length == 0) return [];
         var items = this.queue.slice(0).reverse();
         this.offset = 0;
         this.queue = [];

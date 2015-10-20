@@ -231,7 +231,6 @@ var Store = Object.extend({
                 id:id
             }
             dispatcher.queueOutbound(operation);
-            dispatcher.flushOutbound();
         }
         return entity;
     },
@@ -285,26 +284,30 @@ var Dispatcher = Object.extend({
     },
     queueOutbound:function(operation, options) {
         this.outQueue.enqueue(operation);
+        // TODO add more configurability here so all changes are not immediately flushed
+        dispatcher.flushOutbound();
     },
     queueInbound:function(operation, options) {
         this.inQueue.enqueue(operation);
     },
     flushOutbound:function(options) {
         var operations = this.outQueue.dequeueAll();
-        $
-            .ajax({
-                url:this.endpoint,
-                type:"POST",
-                data:JSON.stringify(operations, Entity.operationReplacer),
-                dataType:"json",
-                contentType:"application/json"
-            })
-            .done(function(data) {
-                data.forEach(function(operation, index) {
-                    this.queueInbound(operation);
+        if (operations.length>0) {
+            $
+                .ajax({
+                    url:this.endpoint,
+                    type:"POST",
+                    data:JSON.stringify(operations, Entity.operationReplacer),
+                    dataType:"json",
+                    contentType:"application/json"
+                })
+                .done(function(data) {
+                    data.forEach(function(operation, index) {
+                        this.queueInbound(operation);
+                    }.bind(this))
+                    this.flushInbound();
                 }.bind(this))
-                this.flushInbound();
-            }.bind(this))
+        }
     },
     flushInbound:function(options) {
         var operations = this.inQueue.dequeueAll();
