@@ -148,10 +148,15 @@ var Store = Object.extend({
             throw "Cannot apply patch because a guid could not be determined.";
         }
         var entity = this.graph[guid];
+        var patchMode;
         if (!entity) {
-            throw "Cannot apply patch because a baseline entity was not found.";
+            entity = _.pick(patch, Config.idKey, Config.metaKey);
+            patchMode = Entity.PATCH_MODE_MERGE;
+            this.graph[guid] = entity;
         }
-        var patchMode = Entity.getPatchMode(entity, patch);
+        else {
+            patchMode = Entity.getPatchMode(entity, patch);
+        }
         if (patchMode===Entity.PATCH_MODE_NONE) {
             throw "Cannot apply patch because patch and entity versions are not compatible.";
         }
