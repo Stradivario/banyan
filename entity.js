@@ -2,6 +2,8 @@ var _ = require("underscore");
 var Observe = require("observe-js");
 var ObjectPath = require("object-path");
 var Config = require("./config.js");
+var Traverse = require("traverse");
+var extend = require("node.extend");
 
 var arrayPathPattern = /[\[\]]]/g;
 
@@ -95,20 +97,30 @@ var joinPath = module.exports.joinPath = function(root, suffix) {
     }
 }
 
-var createPatchOperation = module.exports.createPatchOperation = function(entity, options) {
-    var operation = {};
-    operation.patch = _.pick(entity, Config.idKey);
-    operation.patch[Config.metaKey] = _.pick(entity[Config.metaKey], Config.resourceKey, Config.versionKey);
-    return operation;
+var createPatchOperation = module.exports.createPatchOperation = function(patch, options) {
+    return {
+        patch:patch
+    }
 }
 
-var createFetchOperation = module.exports.createFetchOperation = function(resource, options) {
-    var operation = {
-        fetch:{}
-    };
-    operation.fetch[Config.metaKey] = {};
-    operation.fetch[Config.metaKey][Config.resourceKey] = resource;
-    return operation;
+var createPatch = module.exports.createPatch = function(entity, patchData, options) {
+    var patch = extend(true, {}, patchData);
+    patch[Config.idKey] = entity[Config.idKey];
+    patch[Config.metaKey] = _.pick(entity[Config.metaKey], Config.resourceKey, Config.versionKey);
+    return patch;
+}
+
+var createFetchOperation = module.exports.createFetchOperation = function(fetch, options) {
+    return {
+        fetch:fetch
+    }
+}
+
+var createFetch = module.exports.createFetch = function(resource, fetchData, options) {
+    var fetch = extend(true, {}, fetchData)
+    fetch[Config.metaKey] = {};
+    fetch[Config.metaKey][Config.resourceKey] = resource;
+    return fetch;
 }
 
 var PATCH_MODE_NONE = module.exports.PATCH_MODE_NONE = 0;
@@ -134,4 +146,18 @@ var operationReplacer = module.exports.operationReplacer = function(key, value) 
     else {
         return value;
     }
+}
+
+var strip = module.exports.strip = function(root, options) {
+    Traverse(root).forEach(function(value) {
+        if (this.isRoot) {
+            return;
+        }
+        else if (this.key===Config.observerKey) {
+            this.remove();
+        }
+        else if (isEntity(value)||!(_.isObject(value))) {
+            this.remove();
+        }
+    })
 }

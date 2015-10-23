@@ -50,9 +50,6 @@ var Dispatcher = Object.extend({
                     return repository.patch(operation.patch);
                 }
             }.bind(this)))
-            .then(function(results) {
-                return _.flatten(results);
-            })
     }
 })
 
