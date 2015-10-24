@@ -61,7 +61,7 @@ var Store = Object.extend({
             throw "Cannot apply patch because patch and entity versions are not compatible.";
         }
         else if (patchMode===Entity.PATCH_MODE_REPLACE) {
-            var resource = Resource.lookup(Entity.getResource(entity));
+            var resource = Entity.getResource(entity);
             Entity.strip(entity);
             if (resource) {
                 extend(true, entity, resource.template);
@@ -150,34 +150,6 @@ var Store = Object.extend({
             }
         }
     },
-    track:function(entity, options) {
-        if (!Entity.isEntity(entity)) {
-            throw "Cannot track non-entity objects.";
-        }
-        var guid = Entity.getGuid(entity);
-        if (guid in this.graph) {
-            if (this.graph[guid]===entity) {
-                console.log("Entity with GUID "+guid+" is already being tracked.");
-            }
-            else {
-                throw "Cannot track entity with GUID "+guid+" because it is already being tracked and is not referentially equal to the entity already in the store.";
-            }
-        }
-        this.graph[guid] = entity;
-        this.buildObservers(entity, "");
-    },
-    untrack:function(entity, options) {
-        if (!Entity.isEntity(entity)) {
-            throw "Cannot untrack non-entity objects.";
-        }
-        var guid = Entity.getGuid(entity);
-        if (guid in this.graph) {
-            console.log("Attempted to untrack an entity with GUID "+guid+" that is not being tracked.");
-            return;
-        }
-        this.closeObservers(entity);
-        delete this.graph[guid];
-    },
     buildObjectObserver:function(entity, path, options) {
         var object = Entity.getValueAtPath(entity, path);
         var observer = new Observe.ObjectObserver(object);
@@ -258,6 +230,34 @@ var Store = Object.extend({
 
         }.bind(this));
         return observer;
+    },
+    track:function(entity, options) {
+        if (!Entity.isEntity(entity)) {
+            throw "Cannot track non-entity objects.";
+        }
+        var guid = Entity.getGuid(entity);
+        if (guid in this.graph) {
+            if (this.graph[guid]===entity) {
+                console.log("Entity with GUID "+guid+" is already being tracked.");
+            }
+            else {
+                throw "Cannot track entity with GUID "+guid+" because it is already being tracked and is not referentially equal to the entity already in the store.";
+            }
+        }
+        this.graph[guid] = entity;
+        this.buildObservers(entity, "");
+    },
+    untrack:function(entity, options) {
+        if (!Entity.isEntity(entity)) {
+            throw "Cannot untrack non-entity objects.";
+        }
+        var guid = Entity.getGuid(entity);
+        if (guid in this.graph) {
+            console.log("Attempted to untrack an entity with GUID "+guid+" that is not being tracked.");
+            return;
+        }
+        this.closeObservers(entity);
+        delete this.graph[guid];
     }
 })
 var store = module.exports.store = Store.new();
@@ -305,9 +305,9 @@ var Dispatcher = Object.extend({
                 }))
                 .then(function(data) {
                     data.forEach(function(result, index) {
-                        items[index].deferred.resolve(result.map(function(operation) {
+                        items[index].deferred.resolve(q.all(result.map(function(operation) {
                             return this.queueInbound(operation);
-                        }.bind(this)));
+                        }.bind(this))));
                     }.bind(this))
                     return this.flushInbound();
                 }.bind(this));

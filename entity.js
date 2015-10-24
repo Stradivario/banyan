@@ -1,4 +1,5 @@
 var _ = require("underscore");
+var Resource = require("./resource.js");
 var Observe = require("observe-js");
 var ObjectPath = require("object-path");
 var Config = require("./config.js");
@@ -28,7 +29,12 @@ var getVersion = module.exports.getVersion = function (entity) {
 }
 
 var getResource = module.exports.getResource = function (entity) {
-    return entity[Config.metaKey][Config.resourceKey];
+    if (!entity) {
+        return undefined;
+    }
+    else {
+        return Resource.lookup(entity[Config.metaKey][Config.resourceKey]);
+    }
 }
 
 var getId = module.exports.getId = function (entity) {
@@ -151,6 +157,9 @@ var operationReplacer = module.exports.operationReplacer = function(key, value) 
 var strip = module.exports.strip = function(root, options) {
     Traverse(root).forEach(function(value) {
         if (this.isRoot) {
+            return;
+        }
+        else if (this.key===Config.idKey||this.key===Config.resourceKey) {
             return;
         }
         else if (this.key===Config.observerKey) {
