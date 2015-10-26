@@ -62,10 +62,12 @@ var Store = Object.extend({
         }
         else if (patchMode===Entity.PATCH_MODE_REPLACE) {
             var resource = Entity.getResource(entity);
+            this.closeObservers(entity);
             Entity.strip(entity);
             if (resource) {
                 extend(true, entity, resource.template);
             }
+            this.buildObservers(entity, "");
         }
         for (var key in patch) {
             if (key===Config.idKey||key===Config.metaKey) {
@@ -106,6 +108,7 @@ var Store = Object.extend({
             }
         }
         this.discardObservations(entity);
+        Platform.performMicrotaskCheckpoint();
         return q(entity);
     },
     fetchRemote:function(fetch, options) {
