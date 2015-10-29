@@ -7,9 +7,16 @@ var Traverse = require("traverse");
 var extend = require("node.extend");
 
 var arrayPathPattern = /[\[\]]]/g;
+var backPathPattern = /[^.]+\.\.\.\./g;
 
-var toObjectPath = module.exports.toObjectPath = function(observePath) {
-    return observePath.replace(arrayPathPattern, ".");
+var normalizePath = module.exports.normalizePath = function(observePath) {
+    var objectPath = observePath.replace(arrayPathPattern, ".");
+    var length = 0;
+    while (length!==objectPath.length) {
+        length = objectPath.length;
+        objectPath = objectPath.replace(backPathPattern, "");
+    }
+    return objectPath;
 }
 
 var isEntity = module.exports.isEntity = function (object) {
@@ -75,7 +82,7 @@ var getOrCreateValueAtPath = module.exports.getOrCreateValueAtPath = function(en
         return entity
     }
     else {
-        var objectPath = toObjectPath(path);
+        var objectPath = normalizePath(path);
         var value = ObjectPath.get(entity, objectPath);
         if (_.isUndefined(value)) {
             value = defaultValue;
@@ -90,7 +97,7 @@ var setValueAtPath = module.exports.setValueAtPath = function(entity, path, valu
         return;
     }
     else {
-        ObjectPath.set(entity, toObjectPath(path), value);
+        ObjectPath.set(entity, normalizePath(path), value);
     }
 }
 
