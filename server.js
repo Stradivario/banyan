@@ -5,14 +5,14 @@ var q = require("q");
 var Queue = require("./queue.js");
 var Entity = require("./entity.js");
 var Resource = require("./resource.js");
-var Config = require("./config.js");
+var config = require("./config.js");
 
 var Repository = Object.extend({
     initialize:function(options) {
         return this;
     },
     fetch:function(data, options) {
-        var registeredResource = Resource.lookup(data[Config.metaKey][Config.resourceKey]);
+        var registeredResource = Resource.lookup(data[config.metaKey][config.resourceKey]);
         if (registeredResource) {
             return registeredResource.fetch(data);
         }
@@ -22,7 +22,7 @@ var Repository = Object.extend({
         }
     },
     patch:function(data, options) {
-        var registeredResource = Resource.lookup(data[Config.metaKey][Config.resourceKey]);
+        var registeredResource = Resource.lookup(data[config.metaKey][config.resourceKey]);
         if (registeredResource) {
             return registeredResource.patch(data);
         }

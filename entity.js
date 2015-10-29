@@ -2,7 +2,7 @@ var _ = require("underscore");
 var Resource = require("./resource.js");
 var Observe = require("observe-js");
 var ObjectPath = require("object-path");
-var Config = require("./config.js");
+var config = require("./config.js");
 var Traverse = require("traverse");
 var extend = require("node.extend");
 
@@ -20,11 +20,11 @@ var normalizePath = module.exports.normalizePath = function(observePath) {
 }
 
 var isEntity = module.exports.isEntity = function (object) {
-    return (_.isObject(object)) && (Config.idKey in object) && (Config.metaKey in object) && (Config.resourceKey in object[Config.metaKey]);
+    return (_.isObject(object)) && (config.idKey in object) && (config.metaKey in object) && (config.resourceKey in object[config.metaKey]);
 }
 
 var getGuid = module.exports.getGuid = function (entity) {
-    return createGuid(entity[Config.metaKey][Config.resourceKey], entity[Config.idKey]);
+    return createGuid(entity[config.metaKey][config.resourceKey], entity[config.idKey]);
 }
 
 var createGuid = module.exports.createGuid = function(resource, id) {
@@ -32,7 +32,7 @@ var createGuid = module.exports.createGuid = function(resource, id) {
 }
 
 var getVersion = module.exports.getVersion = function (entity) {
-    return entity[Config.metaKey][Config.versionKey];
+    return entity[config.metaKey][config.versionKey];
 }
 
 var getResource = module.exports.getResource = function (entity) {
@@ -40,27 +40,27 @@ var getResource = module.exports.getResource = function (entity) {
         return undefined;
     }
     else {
-        return Resource.lookup(entity[Config.metaKey][Config.resourceKey]);
+        return Resource.lookup(entity[config.metaKey][config.resourceKey]);
     }
 }
 
 var getId = module.exports.getId = function (entity) {
-    return entity[Config.idKey];
+    return entity[config.idKey];
 }
 
 var buildEntityProxy = module.exports.buildEntityProxy = function(resource, id) {
     var entityProxy = {};
-    entityProxy[Config.idKey] = id;
-    entityProxy[Config.metaKey] = {};
-    entityProxy[Config.metaKey][Config.resourceKey] = resource;
+    entityProxy[config.idKey] = id;
+    entityProxy[config.metaKey] = {};
+    entityProxy[config.metaKey][config.resourceKey] = resource;
     return entityProxy;
 }
 
 var getEntityProxy = module.exports.getEntityProxy = function (entity) {
     var entityProxy = {};
     if (isEntity(entity)) {
-        entityProxy[Config.idKey] = entity[Config.idKey];
-        entityProxy[Config.metaKey] = _.pick(entity[Config.metaKey], Config.versionKey, Config.resourceKey)
+        entityProxy[config.idKey] = entity[config.idKey];
+        entityProxy[config.metaKey] = _.pick(entity[config.metaKey], config.versionKey, config.resourceKey)
         return entityProxy;
     }
     else {
@@ -118,8 +118,8 @@ var createPatchOperation = module.exports.createPatchOperation = function(patch,
 
 var createPatch = module.exports.createPatch = function(entity, patchData, options) {
     var patch = extend(true, {}, patchData);
-    patch[Config.idKey] = entity[Config.idKey];
-    patch[Config.metaKey] = _.pick(entity[Config.metaKey], Config.resourceKey, Config.versionKey);
+    patch[config.idKey] = entity[config.idKey];
+    patch[config.metaKey] = _.pick(entity[config.metaKey], config.resourceKey, config.versionKey);
     return patch;
 }
 
@@ -131,8 +131,8 @@ var createFetchOperation = module.exports.createFetchOperation = function(fetch,
 
 var createFetch = module.exports.createFetch = function(resource, fetchData, options) {
     var fetch = extend(true, {}, fetchData)
-    fetch[Config.metaKey] = {};
-    fetch[Config.metaKey][Config.resourceKey] = resource;
+    fetch[config.metaKey] = {};
+    fetch[config.metaKey][config.resourceKey] = resource;
     return fetch;
 }
 
@@ -141,20 +141,20 @@ var PATCH_MODE_MERGE = module.exports.PATCH_MODE_MERGE = 1;
 var PATCH_MODE_REPLACE = module.exports.PATCH_MODE_REPLACE = 2;
 
 var getPatchMode = module.exports.getPatchMode = function(entity, patch) {
-    if (!patch[Config.metaKey]||!patch[Config.metaKey][Config.versionKey]) {
+    if (!patch[config.metaKey]||!patch[config.metaKey][config.versionKey]) {
         return PATCH_MODE_NONE;
     }
-    if (!entity[Config.metaKey]||!entity[Config.metaKey][Config.versionKey]) {
+    if (!entity[config.metaKey]||!entity[config.metaKey][config.versionKey]) {
         return PATCH_MODE_REPLACE;
     }
-    if (entity[Config.metaKey][Config.versionKey]===patch[Config.metaKey][Config.versionKey]) {
+    if (entity[config.metaKey][config.versionKey]===patch[config.metaKey][config.versionKey]) {
         return PATCH_MODE_MERGE;
     }
 }
 
 var operationReplacer = module.exports.operationReplacer = function(key, value) {
-    if (key===Config.metaKey) {
-        return _.pick(value, Config.resourceKey, Config.versionKey);
+    if (key===config.metaKey) {
+        return _.pick(value, config.resourceKey, config.versionKey);
     }
     else {
         return value;
@@ -166,10 +166,10 @@ var strip = module.exports.strip = function(root, options) {
         if (this.isRoot) {
             return;
         }
-        else if (this.key===Config.idKey||this.key===Config.resourceKey) {
+        else if (this.key===config.idKey||this.key===config.resourceKey) {
             return;
         }
-        else if (this.key===Config.observerKey) {
+        else if (this.key===config.observerKey) {
             this.remove();
         }
         else if (isEntity(value)||!(_.isObject(value))) {

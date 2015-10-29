@@ -7,7 +7,7 @@ var Observe = require("observe-js");
 var Queue = require("./queue.js");
 var Entity = require("./entity.js");
 var Resource = require("./resource.js");
-var Config = require("./config.js");
+var config = require("./config.js");
 var Traverse = require("traverse");
 var extend = require("node.extend");
 
@@ -27,14 +27,14 @@ var Store = Object.extend({
     },
     discardObservations:function(root, options) {
         Traverse(root).forEach(function(value) {
-            if (this.key===Config.observerKey) {
+            if (this.key===config.observerKey) {
                 value.discardChanges();
             }
         })
     },
     closeObservers:function(root, options) {
         Traverse(root).forEach(function(value) {
-            if (this.key===Config.observerKey) {
+            if (this.key===config.observerKey) {
                 value.close();
             }
         })
@@ -70,7 +70,7 @@ var Store = Object.extend({
             this.buildObservers(entity, "");
         }
         for (var key in patch) {
-            if (key===Config.idKey||key===Config.metaKey) {
+            if (key===config.idKey||key===config.metaKey) {
                 continue;
             }
             var path = Observe.Path.get(key);
@@ -91,7 +91,7 @@ var Store = Object.extend({
                 }.bind(this))
             }
             else {
-                if (value===Config.deletionToken) {
+                if (value===config.deletionToken) {
                     Entity.setValueAtPath(entity, key, undefined);
                 }
                 else if (_.isObject(value)) {
@@ -115,7 +115,7 @@ var Store = Object.extend({
         return dispatcher.queueOutbound(Entity.createFetchOperation(fetch));
     },
     fetchLocal:function(fetch, options) {
-        if (!fetch[Config.idKey]) {
+        if (!fetch[config.idKey]) {
             return this.fetchRemote(fetch);
         }
         var guid = Entity.getGuid(fetch);
@@ -132,8 +132,8 @@ var Store = Object.extend({
     buildObservers:function(entity, path, options) {
         var target = Entity.getValueAtPath(entity, path);
         if (_.isArray(target)) {
-            var metadata = Entity.getOrCreateValueAtPath(target, Config.metaKey, {});
-            metadata[Config.observerKey] = this.buildArrayObserver(entity, path);
+            var metadata = Entity.getOrCreateValueAtPath(target, config.metaKey, {});
+            metadata[config.observerKey] = this.buildArrayObserver(entity, path);
             target.forEach(function(element, index) {
                 this.buildObservers(entity, extendedPath+"["+index+"]");
             }.bind(this))
@@ -142,10 +142,10 @@ var Store = Object.extend({
             if (Entity.isEntity(target)&&target!==entity) {
                 return;
             }
-            var metadata = Entity.getOrCreateValueAtPath(target, Config.metaKey, {});
-            metadata[Config.observerKey] = this.buildObjectObserver(entity, path);
+            var metadata = Entity.getOrCreateValueAtPath(target, config.metaKey, {});
+            metadata[config.observerKey] = this.buildObjectObserver(entity, path);
             for (var key in target) {
-                if (key===Config.idKey||key===Config.metaKey) {
+                if (key===config.idKey||key===config.metaKey) {
                     continue;
                 }
                 var extendedPath = Entity.joinPath(path, key);
@@ -184,7 +184,7 @@ var Store = Object.extend({
                 var extendedPath = Entity.joinPath(path, key);
                 var oldValue = getOldValue(key);
                 this.closeObservers(oldValue);
-                patchData[extendedPath] = Config.deletionToken;
+                patchData[extendedPath] = config.deletionToken;
             }.bind(this);
 
             _.each(added, add);
