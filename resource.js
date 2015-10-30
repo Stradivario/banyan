@@ -1,9 +1,15 @@
 require("node-polyfill");
 
 var _ = require("underscore");
+var ObjectPath = require("object-path");
 
 var Resource = module.exports = Object.extend({
     registry:{},
+    validationStates:{
+        valid:"valid",
+        invalid:"invalid"
+    },
+    validators:Object.extend({}),
     resourceName:undefined,
     template:{},
     register:function(resource, options) {
@@ -14,5 +20,18 @@ var Resource = module.exports = Object.extend({
     },
     lookup:function(name) {
         return Resource.registry[name];
+    },
+    validate:function(path, value) {
+        var validator = ObjectPath.get(this.validators, path);
+        var validation;
+        if (!validator) {
+            validation = {
+                state:Resource.validationStates.valid
+            }
+        }
+        else {
+            validation = validator(value);
+        }
+        return validation;
     }
 })

@@ -12,7 +12,7 @@ var Repository = Object.extend({
         return this;
     },
     fetch:function(data, options) {
-        var registeredResource = Resource.lookup(data[config.metaKey][config.resourceKey]);
+        var registeredResource = Resource.lookup(data[config.syntax.metaKey][config.syntax.resourceKey]);
         if (registeredResource) {
             return registeredResource.fetch(data);
         }
@@ -22,7 +22,7 @@ var Repository = Object.extend({
         }
     },
     patch:function(data, options) {
-        var registeredResource = Resource.lookup(data[config.metaKey][config.resourceKey]);
+        var registeredResource = Resource.lookup(data[config.syntax.metaKey][config.syntax.resourceKey]);
         if (registeredResource) {
             return registeredResource.patch(data);
         }

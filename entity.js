@@ -7,6 +7,7 @@ var Traverse = require("traverse");
 var extend = require("node.extend");
 
 var arrayPathPattern = /[\[\]]]/g;
+var objectPathDelimiterPattern = /\./g;
 var backPathPattern = /[^.]+\.\.\.\./g;
 
 var normalizePath = module.exports.normalizePath = function(observePath) {
@@ -19,12 +20,41 @@ var normalizePath = module.exports.normalizePath = function(observePath) {
     return objectPath;
 }
 
+var buildPath = module.exports.buildPath = function(parts) {
+    return normalizePath(parts.join("."));
+}
+
+var buildMetadataPath = module.exports.buildMetadataPath = function(path) {
+    var normalizedPath = this.normalizePath(path);
+    var parts = normalizedPath.split(objectPathDelimiterPattern);
+    var metadataPath = this.buildPath([
+        normalizedPath,
+        "..",
+        config.syntax.metaKey,
+        _.last(parts)
+    ]);
+    return metadataPath;
+}
+
+var getMetaData = module.exports.getMetadata = function(entity, path) {
+    if (!path) {
+        return {};
+    }
+    else if (_.isObject(path)) {
+        return path[config.syntax.metaKey]||{};
+    }
+    else if (_.isString(path)) {
+        var metadataPath = buildMetadataPath(path);
+        return ObjectPath.get(entity, metadataPath)||{};
+    }
+}
+
 var isEntity = module.exports.isEntity = function (object) {
-    return (_.isObject(object)) && (config.idKey in object) && (config.metaKey in object) && (config.resourceKey in object[config.metaKey]);
+    return (_.isObject(object)) && (config.syntax.idKey in object) && (config.syntax.metaKey in object) && (config.syntax.resourceKey in object[config.syntax.metaKey]);
 }
 
 var getGuid = module.exports.getGuid = function (entity) {
-    return createGuid(entity[config.metaKey][config.resourceKey], entity[config.idKey]);
+    return createGuid(entity[config.syntax.metaKey][config.syntax.resourceKey], entity[config.syntax.idKey]);
 }
 
 var createGuid = module.exports.createGuid = function(resource, id) {
@@ -32,7 +62,7 @@ var createGuid = module.exports.createGuid = function(resource, id) {
 }
 
 var getVersion = module.exports.getVersion = function (entity) {
-    return entity[config.metaKey][config.versionKey];
+    return entity[config.syntax.metaKey][config.syntax.versionKey];
 }
 
 var getResource = module.exports.getResource = function (entity) {
@@ -40,27 +70,27 @@ var getResource = module.exports.getResource = function (entity) {
         return undefined;
     }
     else {
-        return Resource.lookup(entity[config.metaKey][config.resourceKey]);
+        return Resource.lookup(entity[config.syntax.metaKey][config.syntax.resourceKey]);
     }
 }
 
 var getId = module.exports.getId = function (entity) {
-    return entity[config.idKey];
+    return entity[config.syntax.idKey];
 }
 
 var buildEntityProxy = module.exports.buildEntityProxy = function(resource, id) {
     var entityProxy = {};
-    entityProxy[config.idKey] = id;
-    entityProxy[config.metaKey] = {};
-    entityProxy[config.metaKey][config.resourceKey] = resource;
+    entityProxy[config.syntax.idKey] = id;
+    entityProxy[config.syntax.metaKey] = {};
+    entityProxy[config.syntax.metaKey][config.syntax.resourceKey] = resource;
     return entityProxy;
 }
 
 var getEntityProxy = module.exports.getEntityProxy = function (entity) {
     var entityProxy = {};
     if (isEntity(entity)) {
-        entityProxy[config.idKey] = entity[config.idKey];
-        entityProxy[config.metaKey] = _.pick(entity[config.metaKey], config.versionKey, config.resourceKey)
+        entityProxy[config.syntax.idKey] = entity[config.syntax.idKey];
+        entityProxy[config.syntax.metaKey] = _.pick(entity[config.syntax.metaKey], config.syntax.versionKey, config.syntax.resourceKey)
         return entityProxy;
     }
     else {
@@ -118,8 +148,8 @@ var createPatchOperation = module.exports.createPatchOperation = function(patch,
 
 var createPatch = module.exports.createPatch = function(entity, patchData, options) {
     var patch = extend(true, {}, patchData);
-    patch[config.idKey] = entity[config.idKey];
-    patch[config.metaKey] = _.pick(entity[config.metaKey], config.resourceKey, config.versionKey);
+    patch[config.syntax.idKey] = entity[config.syntax.idKey];
+    patch[config.syntax.metaKey] = _.pick(entity[config.syntax.metaKey], config.syntax.resourceKey, config.syntax.versionKey);
     return patch;
 }
 
@@ -131,8 +161,8 @@ var createFetchOperation = module.exports.createFetchOperation = function(fetch,
 
 var createFetch = module.exports.createFetch = function(resource, fetchData, options) {
     var fetch = extend(true, {}, fetchData)
-    fetch[config.metaKey] = {};
-    fetch[config.metaKey][config.resourceKey] = resource;
+    fetch[config.syntax.metaKey] = {};
+    fetch[config.syntax.metaKey][config.syntax.resourceKey] = resource;
     return fetch;
 }
 
@@ -141,20 +171,20 @@ var PATCH_MODE_MERGE = module.exports.PATCH_MODE_MERGE = 1;
 var PATCH_MODE_REPLACE = module.exports.PATCH_MODE_REPLACE = 2;
 
 var getPatchMode = module.exports.getPatchMode = function(entity, patch) {
-    if (!patch[config.metaKey]||!patch[config.metaKey][config.versionKey]) {
+    if (!patch[config.syntax.metaKey]||!patch[config.syntax.metaKey][config.syntax.versionKey]) {
         return PATCH_MODE_NONE;
     }
-    if (!entity[config.metaKey]||!entity[config.metaKey][config.versionKey]) {
+    if (!entity[config.syntax.metaKey]||!entity[config.syntax.metaKey][config.syntax.versionKey]) {
         return PATCH_MODE_REPLACE;
     }
-    if (entity[config.metaKey][config.versionKey]===patch[config.metaKey][config.versionKey]) {
+    if (entity[config.syntax.metaKey][config.syntax.versionKey]===patch[config.syntax.metaKey][config.syntax.versionKey]) {
         return PATCH_MODE_MERGE;
     }
 }
 
 var operationReplacer = module.exports.operationReplacer = function(key, value) {
-    if (key===config.metaKey) {
-        return _.pick(value, config.resourceKey, config.versionKey);
+    if (key===config.syntax.metaKey) {
+        return _.pick(value, config.syntax.resourceKey, config.syntax.versionKey);
     }
     else {
         return value;
@@ -166,10 +196,10 @@ var strip = module.exports.strip = function(root, options) {
         if (this.isRoot) {
             return;
         }
-        else if (this.key===config.idKey||this.key===config.resourceKey) {
+        else if (this.key===config.syntax.idKey||this.key===config.syntax.resourceKey) {
             return;
         }
-        else if (this.key===config.observerKey) {
+        else if (this.key===config.syntax.observerKey) {
             this.remove();
         }
         else if (isEntity(value)||!(_.isObject(value))) {
