@@ -3,7 +3,7 @@ var Resource = require("./resource.js");
 var Observe = require("observe-js");
 var ObjectPath = require("object-path");
 var config = require("./config.js");
-var Traverse = require("traverse");
+var traverse = require("traverse");
 var extend = require("node.extend");
 
 var arrayPathPattern = /[\[\]]]/g;
@@ -192,7 +192,7 @@ var operationReplacer = module.exports.operationReplacer = function(key, value) 
 }
 
 var strip = module.exports.strip = function(root, options) {
-    Traverse(root).forEach(function(value) {
+    traverse(root).forEach(function(value) {
         if (this.isRoot) {
             return;
         }

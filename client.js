@@ -8,7 +8,7 @@ var Queue = require("./queue.js");
 var Entity = require("./entity.js");
 var Resource = require("./resource.js");
 var config = require("./config.js");
-var Traverse = require("traverse");
+var traverse = require("traverse");
 var ObjectPath = require("object-path");
 var extend = require("node.extend");
 
@@ -27,14 +27,14 @@ var Store = Object.extend({
         return trackedEntity;
     },
     discardObservations:function(root, options) {
-        Traverse(root).forEach(function(value) {
+        traverse(root).forEach(function(value) {
             if (this.key===config.syntax.observerKey) {
                 value.discardChanges();
             }
         })
     },
     closeObservers:function(root, options) {
-        Traverse(root).forEach(function(value) {
+        traverse(root).forEach(function(value) {
             if (this.key===config.syntax.observerKey) {
                 value.close();
             }
