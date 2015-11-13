@@ -6,16 +6,16 @@
     "url" : "git@github.com:santanubasu/banyan.git"
   },
   "dependencies": {
+    "node-polyfill":"git@github.com:santanubasu/node-polyfill.git",
     "underscore":"1.8.2",
     "jquery":"2.1.x",
     "jsondiffpatch":"0.1.37",
     "observe-js":"0.4.2",
     "tape":"4.2.1",
     "browserify":"11.0.1",
-    "q":"0.9.6",
+    "q":"1.4.1",
     "object-path":"0.9.2",
     "traverse":"0.6.6",
-    "node.extend":"1.1.5",
-    "node-polyfill":"git@github.com:santanubasu/node-polyfill.git"
+    "node.extend":"1.1.5"
   }
 }

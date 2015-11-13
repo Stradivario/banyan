@@ -13,6 +13,12 @@ var Resource = module.exports = Object.extend({
     resourceName:undefined,
     template:{},
     register:function(resource, options) {
+        if (_.isArray(resource)) {
+            resource.forEach(function(resourceItem) {
+                this.register(resourceItem, options);
+            }.bind(this));
+            return;
+        }
         if (resource.resourceName in Resource.registry) {
             throw "Cannot register a resource under the name "+resource.resourceName+" because this name already exists in the resource registry."
         }
