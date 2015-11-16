@@ -39,7 +39,8 @@ var Store = Object.extend({
             }
         })
     },
-    put:function(data, options) {
+    put:function(patch, options) {
+        var data = patch.data;
         var guid = shared.Entity.getGuid(data);
         if (!guid) {
             throw "Cannot put data in store because a guid could not be determined.";
@@ -108,9 +109,9 @@ var Store = Object.extend({
         Platform.performMicrotaskCheckpoint();
         return q(entity);
     },
-    get:function(data, options) {
-        var query = data.query;
-        var guid = shared.Resource.buildGuid(query[config.syntax.idKey], data[config.syntax.metaKey][config.syntax.resourceKey]);
+    get:function(fetch, options) {
+        var query = fetch.query;
+        var guid = shared.Resource.buildGuid(query[config.syntax.idKey], query[config.syntax.metaKey][config.syntax.resourceKey]);
         if (guid in this.graph) {
             return this.graph[guid]
         }
@@ -207,7 +208,7 @@ var Store = Object.extend({
                 patchData[config.syntax.idKey] = entity[config.syntax.idKey];
                 patchData[config.syntax.metaKey] = _.pick(entity[config.syntax.metaKey], config.syntax.resourceKey, config.syntax.versionKey);
                 dispatcher.queueOutbound({
-                    patch:patchData
+                    data:patchData
                 });
             }
         }.bind(this));
@@ -246,7 +247,7 @@ var Store = Object.extend({
             patchData[config.syntax.idKey] = entity[config.syntax.idKey];
             patchData[config.syntax.metaKey] = _.pick(entity[config.syntax.metaKey], config.syntax.resourceKey, config.syntax.versionKey);
             dispatcher.queueOutbound({
-                patch:patchData
+                data:patchData
             });
         }.bind(this));
         return observer;
@@ -347,7 +348,7 @@ var Dispatcher = Object.extend({
         var items = this.inQueue.dequeueAll();
         return q.all(items.map(function(item) {
             return store
-                .put(item.operation.patch)
+                .put(item.operation)
                 .then(function(entity) {
                     item.deferred.resolve(entity);
                 });
@@ -365,8 +366,8 @@ var ResourceMixin = module.exports.ResourceMixin = Object.extend({
                 query:query
             }
         );
-        fetch[config.syntax.metaKey] = {};
-        fetch[config.syntax.metaKey][config.syntax.resourceKey] = this.resourceName;
+        query[config.syntax.metaKey] = {};
+        query[config.syntax.metaKey][config.syntax.resourceKey] = this.resourceName;
         return store.get(fetch, options)
     },
     fetchRemote:function(query, options) {
@@ -376,12 +377,9 @@ var ResourceMixin = module.exports.ResourceMixin = Object.extend({
                 query:query
             },
             _.pick(options, "projection", "start", "end"));
-        fetch[config.syntax.metaKey] = {};
-        fetch[config.syntax.metaKey][config.syntax.resourceKey] = this.resourceName;
-        var operation = {
-            fetch:fetch
-        }
-        return dispatcher.queueOutbound(operation);
+        query[config.syntax.metaKey] = {};
+        query[config.syntax.metaKey][config.syntax.resourceKey] = this.resourceName;
+        return dispatcher.queueOutbound(fetch);
     }
 })
 

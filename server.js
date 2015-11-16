@@ -9,20 +9,20 @@ var Repository = Object.extend({
     initialize:function(options) {
         return this;
     },
-    fetch:function(data, options) {
-        var registeredResource = shared.Resource.lookup(data[config.syntax.metaKey][config.syntax.resourceKey]);
+    fetch:function(operation, options) {
+        var registeredResource = shared.Resource.lookup(operation.query[config.syntax.metaKey][config.syntax.resourceKey]);
         if (registeredResource) {
-            return registeredResource.fetch(data);
+            return registeredResource.fetch(operation);
         }
         else {
             // TODO construct an error object inside the metadata of the resposne entity, which should have the same
             // resource and id as the data
         }
     },
-    patch:function(data, options) {
-        var registeredResource = shared.Resource.lookup(data[config.syntax.metaKey][config.syntax.resourceKey]);
+    patch:function(operation, options) {
+        var registeredResource = shared.Resource.lookup(operation.data[config.syntax.metaKey][config.syntax.resourceKey]);
         if (registeredResource) {
-            return registeredResource.patch(data);
+            return registeredResource.patch(operation);
         }
         else {
             // TODO construct an error object inside the metadata of the resposne entity, which should have the same
@@ -41,11 +41,11 @@ var Dispatcher = Object.extend({
         var operations = operations;
         return q
             .all(operations.map(function(operation) {
-                if (operation.fetch) {
-                    return repository.fetch(operation.fetch);
+                if (operation.query) {
+                    return repository.fetch(operation);
                 }
-                else if (operation.patch) {
-                    return repository.patch(operation.patch);
+                else if (operation.data) {
+                    return repository.patch(operation);
                 }
             }.bind(this)))
     }
