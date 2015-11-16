@@ -2,9 +2,7 @@ require("node-polyfill");
 
 var _ = require("underscore");
 var q = require("q");
-var Queue = require("./queue.js");
-var Entity = require("./entity.js");
-var Resource = require("./resource.js");
+var shared = require("./shared.js");
 var config = require("./config.js");
 
 var Repository = Object.extend({
@@ -12,7 +10,7 @@ var Repository = Object.extend({
         return this;
     },
     fetch:function(data, options) {
-        var registeredResource = Resource.lookup(data[config.syntax.metaKey][config.syntax.resourceKey]);
+        var registeredResource = shared.Resource.lookup(data[config.syntax.metaKey][config.syntax.resourceKey]);
         if (registeredResource) {
             return registeredResource.fetch(data);
         }
@@ -22,7 +20,7 @@ var Repository = Object.extend({
         }
     },
     patch:function(data, options) {
-        var registeredResource = Resource.lookup(data[config.syntax.metaKey][config.syntax.resourceKey]);
+        var registeredResource = shared.Resource.lookup(data[config.syntax.metaKey][config.syntax.resourceKey]);
         if (registeredResource) {
             return registeredResource.patch(data);
         }
@@ -54,4 +52,3 @@ var Dispatcher = Object.extend({
 })
 
 var dispatcher = module.exports.dispatcher = Dispatcher.new();
-

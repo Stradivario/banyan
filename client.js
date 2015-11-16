@@ -5,8 +5,7 @@ var $ = require("jquery");
 var q = require("q");
 var Observe = require("observe-js");
 var Queue = require("./queue.js");
-var Entity = require("./entity.js");
-var Resource = require("./resource.js");
+var shared = require("./shared.js");
 var config = require("./config.js");
 var traverse = require("traverse");
 var ObjectPath = require("object-path");
@@ -18,7 +17,7 @@ var Store = Object.extend({
         return this;
     },
     upgradeEntityProxy:function(entityProxy, options) {
-        var guid = Entity.getGuid(entityProxy);
+        var guid = shared.Entity.getGuid(entityProxy);
         var trackedEntity = this.graph[guid];
         if (!trackedEntity) {
             trackedEntity = entityProxy;
@@ -40,71 +39,68 @@ var Store = Object.extend({
             }
         })
     },
-    patchRemote:function(operation, options) {
-        return dispatcher.queueOutbound(operation);
-    },
-    patchLocal:function(patch, options) {
-        var guid = Entity.getGuid(patch);
+    put:function(data, options) {
+        var guid = shared.Entity.getGuid(data);
         if (!guid) {
-            throw "Cannot apply patch because a guid could not be determined.";
+            throw "Cannot put data in store because a guid could not be determined.";
         }
         var entity = this.graph[guid];
         var patchMode;
         if (!entity) {
-            entity = Entity.getEntityProxy(patch);
-            patchMode = Entity.PATCH_MODE_REPLACE;
+            entity = shared.Entity.getProxy(data);
+            patchMode = shared.Entity.PATCH_MODE_REPLACE;
             this.graph[guid] = entity;
         }
         else {
-            patchMode = Entity.getPatchMode(entity, patch);
+            patchMode = shared.Entity.getPatchMode(entity, data);
         }
-        if (patchMode===Entity.PATCH_MODE_NONE) {
-            throw "Cannot apply patch because patch and entity versions are not compatible.";
+        if (patchMode===shared.Entity.PATCH_MODE_NONE) {
+            throw "Cannot put data in store because data and entity versions are not compatible.";
         }
-        else if (patchMode===Entity.PATCH_MODE_REPLACE) {
-            var resource = Entity.getResource(entity);
+        else if (patchMode===shared.Entity.PATCH_MODE_REPLACE) {
+            var resource = shared.Resource.forEntity(entity);
             this.closeObservers(entity);
-            Entity.strip(entity);
+            shared.Entity.strip(entity);
             if (resource) {
                 extend(true, entity, resource.template);
             }
             this.buildObservers(entity, "");
         }
-        for (var key in patch) {
+        for (var key in data) {
             if (key===config.syntax.idKey||key===config.syntax.metaKey) {
                 continue;
             }
             var path = Observe.Path.get(key);
-            var value = patch[key];
+            var value = data[key];
             if (_.isArray(value)) {
                 value.forEach(function(splice) {
                     var index = splice[0];
                     var removedCount = splice[1];
                     var addedValues = splice[2].map(function(addedValue) {
-                        if (Entity.isEntity(addedValue)) {
+                        if (shared.Entity.isEntity(addedValue)) {
                             return this.upgradeEntityProxy(addedValue);
                         }
                         else {
                             return addedValue;
                         }
                     }.bind(this));
-                    Entity.getValueAtPath(entity, key).splice(index, removedCount, addedValues);
+                    shared.Entity.getValueAtPath(entity, key).splice(index, removedCount, addedValues);
                 }.bind(this))
             }
             else {
                 if (value===config.syntax.deletionToken) {
-                    Entity.setValueAtPath(entity, key, undefined);
+                    shared.Entity.setValueAtPath(entity, key, undefined);
                 }
                 else if (_.isObject(value)) {
-                    if (Entity.isEntity(value)) {
-                        Entity.setValueAtPath(entity, key, this.upgradeEntityProxy(value));
+                    if (shared.Entity.isEntity(value)) {
+                        shared.Entity.setValueAtPath(entity, key, this.upgradeEntityProxy(value));
                     }
                     else {
-                        extend(true, Entity.getOrCreateValueAtPath(entity, key, {}), value);
+                        extend(true, shared.Entity.getOrCreateValueAtPath(entity, key, {}), value);
                     }
                 }
                 else {
-                    Entity.setValueAtPath(entity, key, value);
+                    shared.Entity.setValueAtPath(entity, key, value);
                 }
             }
         }
@@ -112,61 +108,53 @@ var Store = Object.extend({
         Platform.performMicrotaskCheckpoint();
         return q(entity);
     },
-    fetchRemote:function(fetch, options) {
-        return dispatcher.queueOutbound(Entity.createFetchOperation(fetch));
-    },
-    fetchLocal:function(fetch, options) {
-        if (!fetch[config.syntax.idKey]) {
-            return this.fetchRemote(fetch);
-        }
-        var guid = Entity.getGuid(fetch);
-        var entity;
+    get:function(data, options) {
+        var query = data.query;
+        var guid = shared.Resource.buildGuid(query[config.syntax.idKey], data[config.syntax.metaKey][config.syntax.resourceKey]);
         if (guid in this.graph) {
-            entity = this.graph[guid]
-            return q(entity);
+            return this.graph[guid]
         }
         else {
-            this.fetchRemote(fetch);
-            return this.patchLocal(fetch);
+            return undefined;
         }
     },
     buildObservers:function(entity, path, options) {
-        var target = Entity.getValueAtPath(entity, path);
+        var target = shared.Entity.getValueAtPath(entity, path);
         if (_.isArray(target)) {
-            var metadata = Entity.getOrCreateValueAtPath(target, config.syntax.metaKey, {});
+            var metadata = shared.Entity.getOrCreateValueAtPath(target, config.syntax.metaKey, {});
             metadata[config.syntax.observerKey] = this.buildArrayObserver(entity, path);
             target.forEach(function(element, index) {
                 this.buildObservers(entity, extendedPath+"["+index+"]");
             }.bind(this))
         }
         else if (_.isObject(target)) {
-            if (Entity.isEntity(target)&&target!==entity) {
+            if (shared.Entity.isEntity(target)&&target!==entity) {
                 return;
             }
-            var metadata = Entity.getOrCreateValueAtPath(target, config.syntax.metaKey, {});
+            var metadata = shared.Entity.getOrCreateValueAtPath(target, config.syntax.metaKey, {});
             metadata[config.syntax.observerKey] = this.buildObjectObserver(entity, path);
             for (var key in target) {
                 if (key===config.syntax.idKey||key===config.syntax.metaKey) {
                     continue;
                 }
-                var extendedPath = Entity.joinPath(path, key);
+                var extendedPath = shared.Path.joinPath(path, key);
                 this.buildObservers(entity, extendedPath);
             }
         }
     },
     buildObjectObserver:function(entity, path, options) {
-        var object = Entity.getValueAtPath(entity, path);
+        var object = shared.Entity.getValueAtPath(entity, path);
         var observer = new Observe.ObjectObserver(object);
-        var resource = Entity.getResource(entity);
+        var resource = shared.Resource.forEntity(entity);
         observer.open(function(added, removed, changed, getOldValue) {
             var patchData = {};
             var valid = true;
             var add = function(value, key) {
-                var extendedPath = Entity.joinPath(path, key);
+                var extendedPath = shared.Path.joinPath(path, key);
                 var validation = resource.validate(extendedPath, value);
-                if (validation.state===Resource.validationStates.valid) {
-                    if (Entity.isEntity(value)) {
-                        patchData[extendedPath] = Entity.getEntityProxy(value);
+                if (validation.state===shared.Resource.validationStates.valid) {
+                    if (shared.Entity.isEntity(value)) {
+                        patchData[extendedPath] = shared.Entity.getProxy(value);
                     }
                     else {
                         patchData[extendedPath] = value;
@@ -176,16 +164,16 @@ var Store = Object.extend({
                 else {
                     valid = false;
                 }
-                ObjectPath.set(entity, Entity.joinPath(Entity.buildMetadataPath(extendedPath), config.syntax.validationPath), validation);
+                ObjectPath.set(entity, shared.Path.joinPath(shared.Path.buildMetadataPath(extendedPath), config.syntax.validationPath), validation);
             }.bind(this);
             var change = function(value, key) {
-                var extendedPath = Entity.joinPath(path, key);
+                var extendedPath = shared.Path.joinPath(path, key);
                 var oldValue = getOldValue(key);
                 this.closeObservers(oldValue);
                 var validation = resource.validate(extendedPath, value);
-                if (validation.state===Resource.validationStates.valid) {
-                    if (Entity.isEntity(value)) {
-                        patchData[extendedPath] = Entity.getEntityProxy(value);
+                if (validation.state===shared.Resource.validationStates.valid) {
+                    if (shared.Entity.isEntity(value)) {
+                        patchData[extendedPath] = shared.Entity.getProxy(value);
                     }
                     else {
                         patchData[extendedPath] = value;
@@ -195,12 +183,12 @@ var Store = Object.extend({
                 else {
                     valid = false;
                 }
-                ObjectPath.set(entity, Entity.joinPath(Entity.buildMetadataPath(extendedPath), config.syntax.validationPath), validation);
+                ObjectPath.set(entity, shared.Path.joinPath(shared.Path.buildMetadataPath(extendedPath), config.syntax.validationPath), validation);
             }.bind(this);
             var remove = function(value, key) {
-                var extendedPath = Entity.joinPath(path, key);
+                var extendedPath = shared.Path.joinPath(path, key);
                 var validation = resource.validate(extendedPath, undefined);
-                if (validation.state===Resource.validationStates.valid) {
+                if (validation.state===shared.Resource.validationStates.valid) {
                     var oldValue = getOldValue(key);
                     this.closeObservers(oldValue);
                     patchData[extendedPath] = config.syntax.deletionToken;
@@ -208,7 +196,7 @@ var Store = Object.extend({
                 else {
                     valid = false;
                 }
-                ObjectPath.set(entity, Entity.joinPath(Entity.buildMetadataPath(extendedPath), config.syntax.validationPath), validation);
+                ObjectPath.set(entity, shared.Path.joinPath(shared.Path.buildMetadataPath(extendedPath), config.syntax.validationPath), validation);
             }.bind(this);
 
             _.each(added, add);
@@ -216,15 +204,17 @@ var Store = Object.extend({
             _.each(removed, remove);
 
             if (valid) {
-                var patch = Entity.createPatch(entity, patchData);
-                dispatcher.queueOutbound(Entity.createPatchOperation(patch));
+                patchData[config.syntax.idKey] = entity[config.syntax.idKey];
+                patchData[config.syntax.metaKey] = _.pick(entity[config.syntax.metaKey], config.syntax.resourceKey, config.syntax.versionKey);
+                dispatcher.queueOutbound({
+                    patch:patchData
+                });
             }
-
         }.bind(this));
         return observer;
     },
     buildArrayObserver:function(entity, path, options) {
-        var array = Entity.getValueAtPath(entity, path);
+        var array = shared.Entity.getValueAtPath(entity, path);
         var observer = new Observe.ArrayObserver(array);
         observer.open(function(splices) {
             var patchData = {};
@@ -233,7 +223,7 @@ var Store = Object.extend({
                 var removed = splice.removed;
                 var added = array.slice(index, index+splice.addedCount);
                 removed.forEach(function(element) {
-                    if (Entity.isEntity(element)) {
+                    if (shared.Entity.isEntity(element)) {
                     }
                     else {
                         this.closeObservers(element);
@@ -243,8 +233,8 @@ var Store = Object.extend({
                     index,
                     removed.length,
                     added.map(function(element, offset) {
-                        if (Entity.isEntity(element)) {
-                            return Entity.getEntityProxy(element);
+                        if (shared.Entity.isEntity(element)) {
+                            return shared.Entity.getProxy(element);
                         }
                         else {
                             this.buildObservers(entity, path+"["+(index+offset)+"]");
@@ -253,18 +243,19 @@ var Store = Object.extend({
                     }.bind(this))
                 ]
             }.bind(this))
-
-            var patch = Entity.createPatch(entity, patchData);
-            dispatcher.queueOutbound(Entity.createPatchOperation(patch));
-
+            patchData[config.syntax.idKey] = entity[config.syntax.idKey];
+            patchData[config.syntax.metaKey] = _.pick(entity[config.syntax.metaKey], config.syntax.resourceKey, config.syntax.versionKey);
+            dispatcher.queueOutbound({
+                patch:patchData
+            });
         }.bind(this));
         return observer;
     },
     track:function(entity, options) {
-        if (!Entity.isEntity(entity)) {
+        if (!shared.Entity.isEntity(entity)) {
             throw "Cannot track non-entity objects.";
         }
-        var guid = Entity.getGuid(entity);
+        var guid = shared.Entity.getGuid(entity);
         if (guid in this.graph) {
             if (this.graph[guid]===entity) {
                 console.log("Entity with GUID "+guid+" is already being tracked.");
@@ -277,10 +268,10 @@ var Store = Object.extend({
         this.buildObservers(entity, "");
     },
     untrack:function(entity, options) {
-        if (!Entity.isEntity(entity)) {
+        if (!shared.Entity.isEntity(entity)) {
             throw "Cannot untrack non-entity objects.";
         }
-        var guid = Entity.getGuid(entity);
+        var guid = shared.Entity.getGuid(entity);
         if (guid in this.graph) {
             console.log("Attempted to untrack an entity with GUID "+guid+" that is not being tracked.");
             return;
@@ -307,7 +298,7 @@ var Dispatcher = Object.extend({
             deferred:deferred
         });
         // TODO add more configurability here so all changes are not immediately flushed
-        dispatcher.flushOutbound();
+        this.flushOutbound();
         return deferred.promise;
     },
     queueInbound:function(operation, options) {
@@ -328,7 +319,14 @@ var Dispatcher = Object.extend({
                 .ajax({
                     url:this.endpoint,
                     type:"POST",
-                    data:JSON.stringify(operations, Entity.operationReplacer),
+                    data:JSON.stringify(operations, function(key, value) {
+                        if (key===config.syntax.metaKey) {
+                            return _.pick(value, config.syntax.resourceKey, config.syntax.versionKey);
+                        }
+                        else {
+                            return value;
+                        }
+                    }),
                     dataType:"json",
                     contentType:"application/json"
                 }))
@@ -349,7 +347,7 @@ var Dispatcher = Object.extend({
         var items = this.inQueue.dequeueAll();
         return q.all(items.map(function(item) {
             return store
-                .patchLocal(item.operation.patch)
+                .put(item.operation.patch)
                 .then(function(entity) {
                     item.deferred.resolve(entity);
                 });
@@ -358,3 +356,33 @@ var Dispatcher = Object.extend({
 });
 
 var dispatcher = module.exports.dispatcher = Dispatcher.new();
+
+var ResourceMixin = module.exports.ResourceMixin = Object.extend({
+    fetchLocal:function(query, options) {
+        var fetch = extend(
+            true,
+            {
+                query:query
+            }
+        );
+        fetch[config.syntax.metaKey] = {};
+        fetch[config.syntax.metaKey][config.syntax.resourceKey] = this.resourceName;
+        return store.get(fetch, options)
+    },
+    fetchRemote:function(query, options) {
+        var fetch = extend(
+            true,
+            {
+                query:query
+            },
+            _.pick(options, "projection", "start", "end"));
+        fetch[config.syntax.metaKey] = {};
+        fetch[config.syntax.metaKey][config.syntax.resourceKey] = this.resourceName;
+        var operation = {
+            fetch:fetch
+        }
+        return dispatcher.queueOutbound(operation);
+    }
+})
+
+
