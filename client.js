@@ -63,7 +63,7 @@ var Store = Object.extend({
             this.closeObservers(entity);
             shared.Entity.strip(entity);
             if (resource) {
-                extend(true, entity, resource.template);
+                extend(true, entity, resource.entityTemplate);
             }
             this.buildObservers(entity, "");
         }
@@ -376,7 +376,7 @@ var ResourceMixin = module.exports.ResourceMixin = Object.extend({
             {
                 query:query
             },
-            _.pick(options, "projection", "start", "end"));
+            _.pick(options, "projection", "start", "end", "queryKey"));
         query[config.syntax.metaKey] = {};
         query[config.syntax.metaKey][config.syntax.resourceKey] = this.resourceName;
         return dispatcher.queueOutbound(fetch);

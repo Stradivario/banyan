@@ -10,13 +10,16 @@ var config = require("./config.js");
 
 var Resource = module.exports.Resource = Object.extend({
     registry:{},
+    queryKeys:{
+        id:"id"
+    },
     validationStates:{
         valid:"valid",
         invalid:"invalid"
     },
     validators:Object.extend({}),
     resourceName:undefined,
-    template:{},
+    entityTemplate:{},
     register:function(resource, options) {
         if (_.isArray(resource)) {
             resource.forEach(function(resourceItem) {
