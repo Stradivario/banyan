@@ -376,7 +376,7 @@ var ResourceMixin = module.exports.ResourceMixin = Object.extend({
             {
                 query:query
             },
-            _.pick(options, "projection", "start", "end", "queryKey"));
+            _.pick(options, "projection", "start", "end", "fetchKey"));
         query[config.syntax.metaKey] = {};
         query[config.syntax.metaKey][config.syntax.resourceKey] = this.resourceName;
         return dispatcher.queueOutbound(fetch);

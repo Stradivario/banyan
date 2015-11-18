@@ -51,7 +51,10 @@ var Dispatcher = Object.extend({
                                 }
                             })
                             return operations;
-                        });
+                        })
+                        .fail(function(e) {
+                            console.log(e);
+                        })
                 }
                 else if (operation.data) {
                     return repository
@@ -63,7 +66,10 @@ var Dispatcher = Object.extend({
                                 }
                             })
                             return operations;
-                        });
+                        })
+                        .fail(function(e) {
+                            console.log(e);
+                        })
                 }
             }.bind(this)))
     }
@@ -72,18 +78,34 @@ var Dispatcher = Object.extend({
 var dispatcher = module.exports.dispatcher = Dispatcher.new();
 
 var ResourceMixin = module.exports.ResourceMixin = Object.extend({
-    queryTemplates:{
+    fetchTemplates:{
     },
-    buildQueryString:function(key, query, options) {
-        var queryTemplate = this.queryTemplates[key];
-        if (!queryTemplate) {
+    patchTemplates:{
+    },
+    buildQueryStatement:function(key, query, options) {
+        var fetchTemplate = this.fetchTemplates[key];
+        if (!fetchTemplate) {
             throw "Cannot build query string for resource "+this.resourceName+" because key "+key+" was not found in query template map.";
         }
-        if (_.isFunction(queryTemplate)) {
-            return queryTemplate.call(this, query, options);
+        if (_.isFunction(fetchTemplate)) {
+            return fetchTemplate.call(this, query, options);
         }
         else {
-            return queryTemplate;
+            return fetchTemplate;
         }
+    },
+    runFetchStatement:function(statement, operation) {
+        return q([]);
+    },
+    fetch:function(operation) {
+        var fetchKey = operation.fetchKey;
+        if (!fetchKey) {
+            throw "Ad hoc queries are not currently supported."
+        }
+        var statement = this.buildQueryStatement(fetchKey, operation.query);
+        return this.runFetchStatement(statement, operation)
+    },
+    patch:function(operation) {
+
     }
 })

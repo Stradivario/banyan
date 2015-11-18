@@ -10,8 +10,15 @@ var config = require("./config.js");
 
 var Resource = module.exports.Resource = Object.extend({
     registry:{},
-    queryKeys:{
-        id:"id"
+    fetchKeys: {
+        id: "id",
+        search:"search",
+        autocomplete:"autocomplete"
+    },
+    patchKeys:{
+        create:"create",
+        update:"update",
+        delete:"delete"
     },
     validationStates:{
         valid:"valid",
