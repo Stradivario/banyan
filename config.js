@@ -6,8 +6,6 @@ module.exports = {
         idKey: "id",
         metaKey: "_m",
         versionKey: "_v",
-        resourceKey: "_r",
-        observerKey:"_o",
         validationPath:"valid",
         deletionToken: null
     },

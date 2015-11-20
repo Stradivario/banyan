@@ -19,7 +19,7 @@ test("Test track", function (t) {
     var e1 = {
         _m:{
             _version:"1",
-            _resource:"o"
+            _r:"o"
         },
         id:1,
         p1:1,
@@ -29,7 +29,7 @@ test("Test track", function (t) {
     var e2 = {
         _m:{
             _version:"1",
-            _resource:"o"
+            _r:"o"
         },
         id:2,
         p1:1

@@ -9,17 +9,9 @@ var extend = require("node.extend");
 var config = require("./config.js");
 
 var Resource = module.exports.Resource = Object.extend({
+    patch:"patch",
+    fetch:"fetch",
     registry:{},
-    fetchKeys: {
-        id: "id",
-        search:"search",
-        autocomplete:"autocomplete"
-    },
-    patchKeys:{
-        create:"create",
-        update:"update",
-        delete:"delete"
-    },
     validationStates:{
         valid:"valid",
         invalid:"invalid"
@@ -47,7 +39,7 @@ var Resource = module.exports.Resource = Object.extend({
             return undefined;
         }
         else {
-            return this.lookup(entity[config.syntax.metaKey][config.syntax.resourceKey]);
+            return this.lookup(entity[config.syntax.metaKey]._r);
         }
     },
     validate:function(path, value) {
@@ -90,7 +82,7 @@ var Resource = module.exports.Resource = Object.extend({
         var entityProxy = {};
         entityProxy[config.syntax.idKey] = id;
         entityProxy[config.syntax.metaKey] = {};
-        entityProxy[config.syntax.metaKey][config.syntax.resourceKey] = resourceName;
+        entityProxy[config.syntax.metaKey]._r = resourceName;
         return entityProxy;
     }
 })
@@ -115,13 +107,13 @@ var Entity = module.exports.Entity = Object.extend({
         return (_.isObject(object))
             && (config.syntax.idKey in object)
             && (config.syntax.metaKey in object)
-            && (config.syntax.resourceKey in object[config.syntax.metaKey]);
+            && (object[config.syntax.metaKey]._r);
     },
     getGuid:function(entity) {
-        return Resource.buildGuid(entity[config.syntax.metaKey][config.syntax.resourceKey], entity[config.syntax.idKey]);
+        return Resource.buildGuid(entity[config.syntax.metaKey]._r, entity[config.syntax.idKey]);
     },
     getVersion:function(entity) {
-        return entity[config.syntax.metaKey][config.syntax.versionKey];
+        return entity[config.syntax.versionKey];
     },
     getId:function(entity) {
         return entity[config.syntax.idKey];
@@ -130,7 +122,8 @@ var Entity = module.exports.Entity = Object.extend({
         var entityProxy = {};
         if (this.isEntity(entity)) {
             entityProxy[config.syntax.idKey] = entity[config.syntax.idKey];
-            entityProxy[config.syntax.metaKey] = _.pick(entity[config.syntax.metaKey], config.syntax.versionKey, config.syntax.resourceKey)
+            entityProxy[config.syntax.versionKey] = entity[config.syntax.versionKey];
+            entityProxy[config.syntax.metaKey] = _.pick(entity[config.syntax.metaKey], "_r")
             return entityProxy;
         }
         else {
@@ -174,10 +167,10 @@ var Entity = module.exports.Entity = Object.extend({
             if (this.isRoot) {
                 return;
             }
-            else if (this.key===config.syntax.idKey||this.key===config.syntax.resourceKey) {
+            else if (this.key===config.syntax.idKey||this.key==="_r") {
                 return;
             }
-            else if (this.key===config.syntax.observerKey) {
+            else if (this.key==="._observer") {
                 this.remove();
             }
             else if (thiz.isEntity(value)||!(_.isObject(value))) {
@@ -186,13 +179,13 @@ var Entity = module.exports.Entity = Object.extend({
         })
     },
     getPatchMode:function(entity, patch) {
-        if (!patch[config.syntax.metaKey]||!patch[config.syntax.metaKey][config.syntax.versionKey]) {
+        if (!patch[config.syntax.versionKey]) {
             return this.PATCH_MODE_NONE;
         }
-        if (!entity[config.syntax.metaKey]||!entity[config.syntax.metaKey][config.syntax.versionKey]) {
+        if (!entity[config.syntax.versionKey]) {
             return this.PATCH_MODE_REPLACE;
         }
-        if (entity[config.syntax.metaKey][config.syntax.versionKey]===patch[config.syntax.metaKey][config.syntax.versionKey]) {
+        if (entity[config.syntax.versionKey]===patch[config.syntax.versionKey]) {
             return this.PATCH_MODE_MERGE;
         }
     }

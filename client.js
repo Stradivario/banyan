@@ -27,36 +27,35 @@ var Store = Object.extend({
     },
     discardObservations:function(root, options) {
         traverse(root).forEach(function(value) {
-            if (this.key===config.syntax.observerKey) {
+            if (this.key==="_observer") {
                 value.discardChanges();
             }
         })
     },
     closeObservers:function(root, options) {
         traverse(root).forEach(function(value) {
-            if (this.key===config.syntax.observerKey) {
+            if (this.key==="_observer") {
                 value.close();
             }
         })
     },
     put:function(patch, options) {
-        var data = patch.data;
-        var guid = shared.Entity.getGuid(data);
+        var guid = shared.Entity.getGuid(patch);
         if (!guid) {
-            throw "Cannot put data in store because a guid could not be determined.";
+            throw "Cannot put patch in store because a guid could not be determined.";
         }
         var entity = this.graph[guid];
         var patchMode;
         if (!entity) {
-            entity = shared.Entity.getProxy(data);
+            entity = shared.Entity.getProxy(patch);
             patchMode = shared.Entity.PATCH_MODE_REPLACE;
             this.graph[guid] = entity;
         }
         else {
-            patchMode = shared.Entity.getPatchMode(entity, data);
+            patchMode = shared.Entity.getPatchMode(entity, patch);
         }
         if (patchMode===shared.Entity.PATCH_MODE_NONE) {
-            throw "Cannot put data in store because data and entity versions are not compatible.";
+            throw "Cannot put patch in store because patch and entity versions are not compatible.";
         }
         else if (patchMode===shared.Entity.PATCH_MODE_REPLACE) {
             var resource = shared.Resource.forEntity(entity);
@@ -67,12 +66,12 @@ var Store = Object.extend({
             }
             this.buildObservers(entity, "");
         }
-        for (var key in data) {
+        for (var key in patch) {
             if (key===config.syntax.idKey||key===config.syntax.metaKey) {
                 continue;
             }
             var path = Observe.Path.get(key);
-            var value = data[key];
+            var value = patch[key];
             if (_.isArray(value)) {
                 value.forEach(function(splice) {
                     var index = splice[0];
@@ -110,8 +109,7 @@ var Store = Object.extend({
         return q(entity);
     },
     get:function(fetch, options) {
-        var query = fetch.query;
-        var guid = shared.Resource.buildGuid(query[config.syntax.idKey], query[config.syntax.metaKey][config.syntax.resourceKey]);
+        var guid = shared.Resource.buildGuid(fetch[config.syntax.idKey], fetch[config.syntax.metaKey]._r);
         if (guid in this.graph) {
             return this.graph[guid]
         }
@@ -123,7 +121,7 @@ var Store = Object.extend({
         var target = shared.Entity.getValueAtPath(entity, path);
         if (_.isArray(target)) {
             var metadata = shared.Entity.getOrCreateValueAtPath(target, config.syntax.metaKey, {});
-            metadata[config.syntax.observerKey] = this.buildArrayObserver(entity, path);
+            metadata._observer = this.buildArrayObserver(entity, path);
             target.forEach(function(element, index) {
                 this.buildObservers(entity, extendedPath+"["+index+"]");
             }.bind(this))
@@ -133,7 +131,7 @@ var Store = Object.extend({
                 return;
             }
             var metadata = shared.Entity.getOrCreateValueAtPath(target, config.syntax.metaKey, {});
-            metadata[config.syntax.observerKey] = this.buildObjectObserver(entity, path);
+            metadata._observer = this.buildObjectObserver(entity, path);
             for (var key in target) {
                 if (key===config.syntax.idKey||key===config.syntax.metaKey) {
                     continue;
@@ -206,7 +204,9 @@ var Store = Object.extend({
 
             if (valid) {
                 patchData[config.syntax.idKey] = entity[config.syntax.idKey];
-                patchData[config.syntax.metaKey] = _.pick(entity[config.syntax.metaKey], config.syntax.resourceKey, config.syntax.versionKey);
+                patchData[config.syntax.versionKey] = entity[config.syntax.versionKey];
+                patchData[config.syntax.metaKey] = _.pick(entity[config.syntax.metaKey], "_r");
+                patchData[config.syntax.metaKey]._op = shared.Resource.patch;
                 dispatcher.queueOutbound({
                     data:patchData
                 });
@@ -245,7 +245,9 @@ var Store = Object.extend({
                 ]
             }.bind(this))
             patchData[config.syntax.idKey] = entity[config.syntax.idKey];
-            patchData[config.syntax.metaKey] = _.pick(entity[config.syntax.metaKey], config.syntax.resourceKey, config.syntax.versionKey);
+            patchData[config.syntax.versionKey] = entity[config.syntax.versionKey];
+            patchData[config.syntax.metaKey] = _.pick(entity[config.syntax.metaKey], "_r");
+            patchData[config.syntax.metaKey]._op = shared.Resource.patch;
             dispatcher.queueOutbound({
                 data:patchData
             });
@@ -322,7 +324,7 @@ var Dispatcher = Object.extend({
                     type:"POST",
                     data:JSON.stringify(operations, function(key, value) {
                         if (key===config.syntax.metaKey) {
-                            return _.pick(value, config.syntax.resourceKey, config.syntax.versionKey);
+                            return _.pick(value, "_r", "_op");
                         }
                         else {
                             return value;
@@ -359,27 +361,18 @@ var Dispatcher = Object.extend({
 var dispatcher = module.exports.dispatcher = Dispatcher.new();
 
 var ResourceMixin = module.exports.ResourceMixin = Object.extend({
-    fetchLocal:function(query, options) {
-        var fetch = extend(
-            true,
-            {
-                query:query
-            }
-        );
-        query[config.syntax.metaKey] = {};
-        query[config.syntax.metaKey][config.syntax.resourceKey] = this.resourceName;
-        return store.get(fetch, options)
+    fetchLocal:function(fetch, options) {
+        var metadata = {}
+        metadata[config.syntax.metaKey] = {};
+        metadata[config.syntax.metaKey]._r = this.resourceName;
+        return store.get(extend(true, {}, fetch, metadata), options)
     },
-    fetchRemote:function(query, options) {
-        var fetch = extend(
-            true,
-            {
-                query:query
-            },
-            _.pick(options, "projection", "start", "end", "fetchKey"));
-        query[config.syntax.metaKey] = {};
-        query[config.syntax.metaKey][config.syntax.resourceKey] = this.resourceName;
-        return dispatcher.queueOutbound(fetch);
+    fetchRemote:function(operation, fetch, options) {
+        var metadata = {}
+        metadata[config.syntax.metaKey] = {};
+        metadata[config.syntax.metaKey]._r = this.resourceName;
+        metadata[config.syntax.metaKey]._op = operation;
+        return dispatcher.queueOutbound(extend(true, {}, fetch, metadata));
     }
 })
 
