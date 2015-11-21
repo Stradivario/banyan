@@ -13,7 +13,7 @@ var Dispatcher = Object.extend({
         return q
             .all(operations.map(function(operation) {
                 var registeredResource = shared.Resource.lookup(operation[config.syntax.metaKey]._r);
-                var operationKey = shared.Resource.lookup(operation[config.syntax.metaKey]._op);
+                var operationKey = operation[config.syntax.metaKey]._op;
                 operationKey = operationKey||shared.Resource.patch;
                 return registeredResource[operationKey](operation)
                     .fail(function(e) {
