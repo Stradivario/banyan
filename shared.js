@@ -130,35 +130,26 @@ var Entity = module.exports.Entity = Object.extend({
             return undefined;
         }
     },
-    // TODO why is this using Observe vs ObjectPath?
     getValueAtPath:function(entity, path) {
-        if (""===path) {
-            return entity
-        }
-        else {
-            return Observe.Path.get(path).getValueFrom(entity);
-        }
+        var objectPath = Path.normalizePath(path);
+        return ObjectPath.get(entity, objectPath);
     },
     getOrCreateValueAtPath:function(entity, path, defaultValue) {
-        if (""===path) {
-            return entity
+        var objectPath = Path.normalizePath(path);
+        var value = ObjectPath.get(entity, objectPath);
+        if (_.isUndefined(value)) {
+            value = defaultValue;
+            ObjectPath.set(entity, objectPath, value)
         }
-        else {
-            var objectPath = Path.normalizePath(path);
-            var value = ObjectPath.get(entity, objectPath);
-            if (_.isUndefined(value)) {
-                value = defaultValue;
-                ObjectPath.set(entity, objectPath, value)
-            }
-            return value;
-        }
+        return value;
     },
     setValueAtPath:function(entity, path, value) {
         if (""===path) {
             return;
         }
         else {
-            ObjectPath.set(entity, Path.normalizePath(path), value);
+            var objectPath = Path.normalizePath(path);
+            ObjectPath.set(entity, objectPath, value);
         }
     },
     strip:function(root, options) {
@@ -188,6 +179,41 @@ var Entity = module.exports.Entity = Object.extend({
         if (entity[config.syntax.versionKey]===patch[config.syntax.versionKey]) {
             return this.PATCH_MODE_MERGE;
         }
+    },
+    applyPatch:function(patch, target, options) {
+        for (var key in patch) {
+            if (key===config.syntax.idKey ||
+                key===config.syntax.metaKey||
+                key===config.syntax.versionKey) {
+                continue;
+            }
+            var value = patch[key];
+            if (_.isArray(value)) {
+                value.forEach(function(splice) {
+                    var index = splice[0];
+                    var removedCount = splice[1];
+                    var addedValues = splice[2]
+                    this.getValueAtPath(target, key).splice(index, removedCount, addedValues);
+                }.bind(this))
+            }
+            else {
+                if (value===config.syntax.deletionToken) {
+                    this.setValueAtPath(target, key, undefined);
+                }
+                else if (_.isObject(value)) {
+                    if (this.isEntity(value)) {
+                        this.setValueAtPath(target, key, value);
+                    }
+                    else {
+                        extend(true, this.getOrCreateValueAtPath(target, key, {}), value);
+                    }
+                }
+                else {
+                    this.setValueAtPath(target, key, value);
+                }
+            }
+        }
+
     }
 })
 

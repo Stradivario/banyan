@@ -40,12 +40,19 @@ var Store = Object.extend({
         })
     },
     put:function(patch, options) {
+        var thiz = this;
         var guid = shared.Entity.getGuid(patch);
         if (!guid) {
             throw "Cannot put patch in store because a guid could not be determined.";
         }
+        traverse(patch).forEach(function() {
+            if (shared.Entity.isEntity(this.node)) {
+                this.update(thiz.upgradeEntityProxy(this.node));
+            }
+        })
         var entity = this.graph[guid];
         var patchMode;
+
         if (!entity) {
             entity = shared.Entity.getProxy(patch);
             patchMode = shared.Entity.PATCH_MODE_REPLACE;
@@ -54,6 +61,7 @@ var Store = Object.extend({
         else {
             patchMode = shared.Entity.getPatchMode(entity, patch);
         }
+
         if (patchMode===shared.Entity.PATCH_MODE_NONE) {
             throw "Cannot put patch in store because patch and entity versions are not compatible.";
         }
@@ -66,44 +74,9 @@ var Store = Object.extend({
             }
             this.buildObservers(entity, "");
         }
-        for (var key in patch) {
-            if (key===config.syntax.idKey||key===config.syntax.metaKey) {
-                continue;
-            }
-            var path = Observe.Path.get(key);
-            var value = patch[key];
-            if (_.isArray(value)) {
-                value.forEach(function(splice) {
-                    var index = splice[0];
-                    var removedCount = splice[1];
-                    var addedValues = splice[2].map(function(addedValue) {
-                        if (shared.Entity.isEntity(addedValue)) {
-                            return this.upgradeEntityProxy(addedValue);
-                        }
-                        else {
-                            return addedValue;
-                        }
-                    }.bind(this));
-                    shared.Entity.getValueAtPath(entity, key).splice(index, removedCount, addedValues);
-                }.bind(this))
-            }
-            else {
-                if (value===config.syntax.deletionToken) {
-                    shared.Entity.setValueAtPath(entity, key, undefined);
-                }
-                else if (_.isObject(value)) {
-                    if (shared.Entity.isEntity(value)) {
-                        shared.Entity.setValueAtPath(entity, key, this.upgradeEntityProxy(value));
-                    }
-                    else {
-                        extend(true, shared.Entity.getOrCreateValueAtPath(entity, key, {}), value);
-                    }
-                }
-                else {
-                    shared.Entity.setValueAtPath(entity, key, value);
-                }
-            }
-        }
+
+        shared.Entity.applyPatch(patch, entity)
+
         this.discardObservations(entity);
         Platform.performMicrotaskCheckpoint();
         return q(entity);
