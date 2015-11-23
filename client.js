@@ -51,31 +51,28 @@ var Store = Object.extend({
             }
         })
         var entity = this.graph[guid];
-        var patchMode;
 
         if (!entity) {
             entity = shared.Entity.getProxy(patch);
-            patchMode = shared.Entity.PATCH_MODE_REPLACE;
             this.graph[guid] = entity;
         }
-        else {
-            patchMode = shared.Entity.getPatchMode(entity, patch);
-        }
 
-        if (patchMode===shared.Entity.PATCH_MODE_NONE) {
-            throw "Cannot put patch in store because patch and entity versions are not compatible.";
-        }
-        else if (patchMode===shared.Entity.PATCH_MODE_REPLACE) {
-            var resource = shared.Resource.forEntity(entity);
+        var versionCheck = shared.Entity.checkVersion(entity, patch);
+
+        if (versionCheck===shared.Entity.VERSION_AHEAD) {
             this.closeObservers(entity);
-            shared.Entity.strip(entity);
+            this.strip(entity);
+            var resource = shared.Resource.forEntity(entity);
             if (resource) {
                 extend(true, entity, resource.entityTemplate);
             }
-            this.buildObservers(entity, "");
         }
 
-        shared.Entity.applyPatch(patch, entity)
+        shared.Entity.applyPatch(entity, patch, versionCheck);
+
+        if (versionCheck===shared.Entity.VERSION_AHEAD) {
+            this.buildObservers(entity, "");
+        }
 
         this.discardObservations(entity);
         Platform.performMicrotaskCheckpoint();

@@ -88,9 +88,9 @@ var Resource = module.exports.Resource = Object.extend({
 })
 
 var Entity = module.exports.Entity = Object.extend({
-    PATCH_MODE_NONE:0,
-    PATCH_MODE_MERGE:1,
-    PATCH_MODE_REPLACE:2,
+    VERSION_BEHIND:0,
+    VERSION_AHEAD:1,
+    VERSION_COMPATIBLE:2,
     getMetaData:function(entity, path) {
         if (!path) {
             return {};
@@ -169,18 +169,24 @@ var Entity = module.exports.Entity = Object.extend({
             }
         })
     },
-    getPatchMode:function(entity, patch) {
-        if (!patch[config.syntax.versionKey]) {
-            return this.PATCH_MODE_NONE;
+    checkVersion:function(entity, patch) {
+        if (!entity[config.syntax.versionKey]&&patch[config.syntax.versionKey]) {
+            return this.VERSION_AHEAD;
         }
-        if (!entity[config.syntax.versionKey]) {
-            return this.PATCH_MODE_REPLACE;
+        if (!patch[config.syntax.versionKey]&&entity[config.syntax.versionKey]) {
+            return this.VERSION_BEHIND;
         }
-        if (entity[config.syntax.versionKey]===patch[config.syntax.versionKey]) {
-            return this.PATCH_MODE_MERGE;
+        if (entity[config.syntax.versionKey]>patch[config.syntax.versionKey]) {
+            return this.VERSION_BEHIND;
+        }
+        else if (entity[config.syntax.versionKey]<patch[config.syntax.versionKey]) {
+            return this.VERSION_AHEAD;
+        }
+        else {
+            return this.VERSION_COMPATIBLE;
         }
     },
-    applyPatch:function(patch, target, options) {
+    applyPatch:function(entity, patch, options) {
         for (var key in patch) {
             if (key===config.syntax.idKey ||
                 key===config.syntax.metaKey||
@@ -193,27 +199,26 @@ var Entity = module.exports.Entity = Object.extend({
                     var index = splice[0];
                     var removedCount = splice[1];
                     var addedValues = splice[2]
-                    this.getValueAtPath(target, key).splice(index, removedCount, addedValues);
+                    this.getValueAtPath(entity, key).splice(index, removedCount, addedValues);
                 }.bind(this))
             }
             else {
                 if (value===config.syntax.deletionToken) {
-                    this.setValueAtPath(target, key, undefined);
+                    this.setValueAtPath(entity, key, undefined);
                 }
                 else if (_.isObject(value)) {
                     if (this.isEntity(value)) {
-                        this.setValueAtPath(target, key, value);
+                        this.setValueAtPath(entity, key, value);
                     }
                     else {
-                        extend(true, this.getOrCreateValueAtPath(target, key, {}), value);
+                        extend(true, this.getOrCreateValueAtPath(entity, key, {}), value);
                     }
                 }
                 else {
-                    this.setValueAtPath(target, key, value);
+                    this.setValueAtPath(entity, key, value);
                 }
             }
         }
-
     }
 })
 

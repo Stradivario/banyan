@@ -17,6 +17,9 @@ var Dispatcher = Object.extend({
                 operationKey = operationKey||shared.Resource.patch;
                 return registeredResource[operationKey](operation)
                     .fail(function(e) {
+                        // TODO
+                        // need to determine where to handle errors such as version mismatches, and how to return
+                        // meaningful errors
                         console.log(e);
                     })
             }.bind(this)))
