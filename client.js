@@ -16,14 +16,19 @@ var Store = Object.extend({
         this.graph = {};
         return this;
     },
-    upgradeEntityProxy:function(entityProxy, options) {
-        var guid = shared.Entity.getGuid(entityProxy);
-        var trackedEntity = this.graph[guid];
-        if (!trackedEntity) {
-            trackedEntity = entityProxy;
-            this.graph[guid] = trackedEntity;
-        }
-        return trackedEntity;
+    upgradePatch:function(patch, options) {
+        var thiz = this;
+        traverse(patch).forEach(function() {
+            if (this.isNotRoot&&shared.Entity.isEntity(this.node)) {
+                var guid = shared.Entity.getGuid(this.node);
+                var trackedEntity = thiz.graph[guid];
+                if (!trackedEntity) {
+                    trackedEntity = this.node;
+                    thiz.graph[guid] = trackedEntity;
+                }
+                this.update(trackedEntity, true);
+            }
+        })
     },
     discardObservations:function(root, options) {
         traverse(root).forEach(function(value) {
@@ -45,33 +50,36 @@ var Store = Object.extend({
         if (!guid) {
             throw "Cannot put patch in store because a guid could not be determined.";
         }
-        traverse(patch).forEach(function() {
-            if (shared.Entity.isEntity(this.node)) {
-                this.update(thiz.upgradeEntityProxy(this.node));
-            }
-        })
+
+        this.upgradePatch(patch);
         var entity = this.graph[guid];
 
         if (!entity) {
             entity = shared.Entity.getProxy(patch);
-            this.graph[guid] = entity;
-        }
-
-        var versionCheck = shared.Entity.checkVersion(entity, patch);
-
-        if (versionCheck===shared.Entity.VERSION_AHEAD) {
-            this.closeObservers(entity);
-            this.strip(entity);
             var resource = shared.Resource.forEntity(entity);
             if (resource) {
                 extend(true, entity, resource.entityTemplate);
             }
+            shared.Entity.applyPatch(entity, patch);
+            this.track(entity);
         }
+        else {
+            var versionCheck = shared.Entity.checkVersion(entity, patch);
 
-        shared.Entity.applyPatch(entity, patch, versionCheck);
+            if (versionCheck===shared.Entity.VERSION_AHEAD) {
+                this.closeObservers(entity);
+                this.strip(entity);
+                var resource = shared.Resource.forEntity(entity);
+                if (resource) {
+                    extend(true, entity, resource.entityTemplate);
+                }
+            }
 
-        if (versionCheck===shared.Entity.VERSION_AHEAD) {
-            this.buildObservers(entity, "");
+            shared.Entity.applyPatch(entity, patch);
+
+            if (versionCheck===shared.Entity.VERSION_AHEAD) {
+                this.buildObservers(entity, "");
+            }
         }
 
         this.discardObservations(entity);
