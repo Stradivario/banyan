@@ -19,7 +19,7 @@ var Store = Object.extend({
     upgradePatch:function(patch, options) {
         var thiz = this;
         traverse(patch).forEach(function() {
-            if (this.isNotRoot&&shared.Entity.isEntity(this.node)) {
+            if (this.notRoot&&shared.Entity.isEntity(this.node)) {
                 var guid = shared.Entity.getGuid(this.node);
                 var trackedEntity = thiz.graph[guid];
                 if (!trackedEntity) {
@@ -124,17 +124,17 @@ var Store = Object.extend({
         var observer = new Observe.ObjectObserver(object);
         var resource = shared.Resource.forEntity(entity);
         observer.open(function(added, removed, changed, getOldValue) {
-            var patchData = {};
+            var patch = {};
             var valid = true;
             var add = function(value, key) {
                 var extendedPath = shared.Path.joinPath(path, key);
                 var validation = resource.validate(extendedPath, value);
                 if (validation.state===shared.Resource.validationStates.valid) {
                     if (shared.Entity.isEntity(value)) {
-                        patchData[extendedPath] = shared.Entity.getProxy(value);
+                        patch[extendedPath] = shared.Entity.getProxy(value);
                     }
                     else {
-                        patchData[extendedPath] = value;
+                        patch[extendedPath] = value;
                         this.buildObservers(entity, extendedPath);
                     }
                 }
@@ -150,10 +150,10 @@ var Store = Object.extend({
                 var validation = resource.validate(extendedPath, value);
                 if (validation.state===shared.Resource.validationStates.valid) {
                     if (shared.Entity.isEntity(value)) {
-                        patchData[extendedPath] = shared.Entity.getProxy(value);
+                        patch[extendedPath] = shared.Entity.getProxy(value);
                     }
                     else {
-                        patchData[extendedPath] = value;
+                        patch[extendedPath] = value;
                         this.buildObservers(entity, extendedPath);
                     }
                 }
@@ -168,7 +168,7 @@ var Store = Object.extend({
                 if (validation.state===shared.Resource.validationStates.valid) {
                     var oldValue = getOldValue(key);
                     this.closeObservers(oldValue);
-                    patchData[extendedPath] = config.syntax.deletionToken;
+                    patch[extendedPath] = config.syntax.deletionToken;
                 }
                 else {
                     valid = false;
@@ -181,13 +181,11 @@ var Store = Object.extend({
             _.each(removed, remove);
 
             if (valid) {
-                patchData[config.syntax.idKey] = entity[config.syntax.idKey];
-                patchData[config.syntax.versionKey] = entity[config.syntax.versionKey];
-                patchData[config.syntax.metaKey] = _.pick(entity[config.syntax.metaKey], "_r");
-                patchData[config.syntax.metaKey]._op = shared.Resource.patch;
-                dispatcher.queueOutbound({
-                    data:patchData
-                });
+                patch[config.syntax.idKey] = entity[config.syntax.idKey];
+                patch[config.syntax.versionKey] = entity[config.syntax.versionKey];
+                patch[config.syntax.metaKey] = _.pick(entity[config.syntax.metaKey], "_r");
+                patch[config.syntax.metaKey]._op = shared.Resource.patch;
+                dispatcher.queueOutbound(patch);
             }
         }.bind(this));
         return observer;
@@ -196,8 +194,8 @@ var Store = Object.extend({
         var array = shared.Entity.getValueAtPath(entity, path);
         var observer = new Observe.ArrayObserver(array);
         observer.open(function(splices) {
-            var patchData = {};
-            patchData[path] = splices.map(function(splice) {
+            var patch = {};
+            patch[path] = splices.map(function(splice) {
                 var index = splice.index;
                 var removed = splice.removed;
                 var added = array.slice(index, index+splice.addedCount);
@@ -222,13 +220,11 @@ var Store = Object.extend({
                     }.bind(this))
                 ]
             }.bind(this))
-            patchData[config.syntax.idKey] = entity[config.syntax.idKey];
-            patchData[config.syntax.versionKey] = entity[config.syntax.versionKey];
-            patchData[config.syntax.metaKey] = _.pick(entity[config.syntax.metaKey], "_r");
-            patchData[config.syntax.metaKey]._op = shared.Resource.patch;
-            dispatcher.queueOutbound({
-                data:patchData
-            });
+            patch[config.syntax.idKey] = entity[config.syntax.idKey];
+            patch[config.syntax.versionKey] = entity[config.syntax.versionKey];
+            patch[config.syntax.metaKey] = _.pick(entity[config.syntax.metaKey], "_r");
+            patch[config.syntax.metaKey]._op = shared.Resource.patch;
+            dispatcher.queueOutbound(patch);
         }.bind(this));
         return observer;
     },
