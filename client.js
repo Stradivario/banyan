@@ -309,9 +309,14 @@ var Dispatcher = Object.extend({
                 }))
                 .then(function(data) {
                     data.forEach(function(result, index) {
-                        items[index].deferred.resolve(q.all(result.map(function(operation) {
-                            return this.queueInbound(operation);
-                        }.bind(this))));
+                        if (_.isArray(result)) {
+                            items[index].deferred.resolve(q.all(result.map(function(operation) {
+                                return this.queueInbound(operation);
+                            }.bind(this))));
+                        }
+                        else {
+                            items[index].deferred.resolve(this.queueInbound(result));
+                        }
                     }.bind(this))
                     return this.flushInbound();
                 }.bind(this));
@@ -336,17 +341,23 @@ var dispatcher = module.exports.dispatcher = Dispatcher.new();
 
 var ResourceMixin = module.exports.ResourceMixin = Object.extend({
     fetchLocal:function(fetch, options) {
-        var metadata = {}
-        metadata[config.syntax.metaKey] = {};
-        metadata[config.syntax.metaKey]._r = this.resourceName;
-        return store.get(extend(true, {}, fetch, metadata), options)
+        var overlay = {}
+        overlay[config.syntax.metaKey] = {};
+        overlay[config.syntax.metaKey]._r = this.resourceName;
+        return store.get(extend(true, {}, fetch, overlay), options)
     },
     fetchRemote:function(operation, fetch, options) {
-        var metadata = {}
-        metadata[config.syntax.metaKey] = {};
-        metadata[config.syntax.metaKey]._r = this.resourceName;
-        metadata[config.syntax.metaKey]._op = operation;
-        return dispatcher.queueOutbound(extend(true, {}, fetch, metadata));
+        var overlay = {}
+        overlay[config.syntax.metaKey] = {};
+        overlay[config.syntax.metaKey]._r = this.resourceName;
+        overlay[config.syntax.metaKey]._op = operation;
+        return dispatcher.queueOutbound(extend(true, {}, fetch, overlay));
+    },
+    patchNew:function(patch, options) {
+        var overlay = {}
+        overlay[config.syntax.metaKey] = {};
+        overlay[config.syntax.metaKey]._r = this.resourceName;
+        return dispatcher.queueOutbound(extend(true, {}, patch, overlay));
     }
 })
 
