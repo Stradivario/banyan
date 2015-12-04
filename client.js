@@ -64,6 +64,9 @@ var Store = Object.extend({
             shared.Entity.applyPatch(entity, patch);
             this.track(entity);
         }
+        else if (shared.Entity.isVersionPatch(patch)) {
+            shared.Entity.applyPatch(entity, patch);
+        }
         else {
             var versionCheck = shared.Entity.checkVersion(entity, patch);
 

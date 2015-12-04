@@ -130,6 +130,14 @@ var Entity = module.exports.Entity = Object.extend({
             return undefined;
         }
     },
+    getVersionPatch:function(entity) {
+        var versionPatch = _.pick(entity, config.syntax.metaKey, config.syntax.versionKey, config.syntax.idKey);
+        versionPatch[config.syntax.metaKey][config.syntax.versionKey] = entity[config.syntax.versionKey];
+        return versionPatch;
+    },
+    isVersionPatch:function(operation) {
+        return (config.syntax.versionKey in operation[config.syntax.metaKey]);
+    },
     getValueAtPath:function(entity, path) {
         var objectPath = Path.normalizePath(path);
         return ObjectPath.get(entity, objectPath);
@@ -188,9 +196,7 @@ var Entity = module.exports.Entity = Object.extend({
     },
     applyPatch:function(entity, patch, options) {
         for (var key in patch) {
-            if (key===config.syntax.idKey ||
-                key===config.syntax.metaKey||
-                key===config.syntax.versionKey) {
+            if (key===config.syntax.idKey || key===config.syntax.versionKey) {
                 continue;
             }
             var value = patch[key];
