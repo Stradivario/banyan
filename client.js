@@ -1,5 +1,6 @@
 require("node-polyfill");
 
+var log = require("loglevel");
 var _ = require("underscore");
 var $ = require("jquery");
 var q = require("q");
@@ -68,7 +69,7 @@ var Store = Object.extend({
 
             if (versionCheck===shared.Entity.VERSION_AHEAD) {
                 this.closeObservers(entity);
-                this.strip(entity);
+                shared.Entity.strip(entity);
                 var resource = shared.Resource.forEntity(entity);
                 if (resource) {
                     extend(true, entity, resource.entityTemplate);
@@ -235,10 +236,15 @@ var Store = Object.extend({
         var guid = shared.Entity.getGuid(entity);
         if (guid in this.graph) {
             if (this.graph[guid]===entity) {
-                console.log("Entity with GUID "+guid+" is already being tracked.");
+                log.info("Entity with GUID "+guid+" is already being tracked.");
             }
             else {
-                throw "Cannot track entity with GUID "+guid+" because it is already being tracked and is not referentially equal to the entity already in the store.";
+                var message = "Cannot track entity with GUID "+guid+" because it is already being tracked and is not referentially equal to the entity already in the store.";
+                log.error(message)
+                throw {
+                    message:message,
+                    guid:guid
+                };
             }
         }
         this.graph[guid] = entity;
@@ -250,7 +256,7 @@ var Store = Object.extend({
         }
         var guid = shared.Entity.getGuid(entity);
         if (guid in this.graph) {
-            console.log("Attempted to untrack an entity with GUID "+guid+" that is not being tracked.");
+            log.warn("Attempted to untrack an entity with GUID "+guid+" that is not being tracked.");
             return;
         }
         this.closeObservers(entity);
@@ -319,7 +325,15 @@ var Dispatcher = Object.extend({
                         }
                     }.bind(this))
                     return this.flushInbound();
-                }.bind(this));
+                }.bind(this))
+                .fail(function(e) {
+                    var message = "Operation set failed round trip to server."
+                    log.error(message);
+                    throw {
+                        message:message,
+                        operations:operations
+                    }
+                });
         }
         else {
             return q();

@@ -1,5 +1,6 @@
 require("node-polyfill");
 
+var log = require("loglevel");
 var _ = require("underscore");
 var q = require("q");
 var shared = require("./shared.js");
@@ -19,7 +20,14 @@ var Dispatcher = Object.extend({
                     // TODO
                     // need to determine where to handle errors such as version mismatches, and how to return
                     // meaningful errors
-                    console.log(e);
+                    var message = "Operation execution on registered resource failed.";
+                    log.error(e);
+                    throw {
+                        message:message,
+                        resource:registeredResource,
+                        operationKey:operationKey,
+                        operation:operation
+                    }
                 })
         }.bind(this);
 

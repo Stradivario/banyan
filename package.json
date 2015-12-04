@@ -16,6 +16,7 @@
     "q":"1.4.1",
     "object-path":"0.9.2",
     "traverse":"0.6.6",
-    "node.extend":"1.1.5"
+    "node.extend":"1.1.5",
+    "loglevel":"1.4.0"
   }
 }
