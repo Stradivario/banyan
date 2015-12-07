@@ -196,7 +196,7 @@ var Entity = module.exports.Entity = Object.extend({
     },
     applyPatch:function(entity, patch, options) {
         for (var key in patch) {
-            if (key===config.syntax.idKey || key===config.syntax.versionKey) {
+            if (key===config.syntax.idKey) {
                 continue;
             }
             var value = patch[key];
