@@ -132,7 +132,7 @@ var Store = Object.extend({
             var valid = true;
             var add = function(value, key) {
                 var extendedPath = shared.Path.joinPath(path, key);
-                var validation = resource.validate(extendedPath, value);
+                var validation = resource.validate(extendedPath, value, shared.Entity.getMetaData(entity, extendedPath));
                 if (validation.state===shared.Resource.validationStates.valid) {
                     if (shared.Entity.isEntity(value)) {
                         patch[extendedPath] = shared.Entity.getProxy(value);
@@ -151,7 +151,7 @@ var Store = Object.extend({
                 var extendedPath = shared.Path.joinPath(path, key);
                 var oldValue = getOldValue(key);
                 this.closeObservers(oldValue);
-                var validation = resource.validate(extendedPath, value);
+                var validation = resource.validate(extendedPath, value, shared.Entity.getMetaData(entity, extendedPath));
                 if (validation.state===shared.Resource.validationStates.valid) {
                     if (shared.Entity.isEntity(value)) {
                         patch[extendedPath] = shared.Entity.getProxy(value);
@@ -168,7 +168,7 @@ var Store = Object.extend({
             }.bind(this);
             var remove = function(value, key) {
                 var extendedPath = shared.Path.joinPath(path, key);
-                var validation = resource.validate(extendedPath, undefined);
+                var validation = resource.validate(extendedPath, undefined, shared.Entity.getMetaData(entity, extendedPath));
                 if (validation.state===shared.Resource.validationStates.valid) {
                     var oldValue = getOldValue(key);
                     this.closeObservers(oldValue);

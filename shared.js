@@ -42,7 +42,7 @@ var Resource = module.exports.Resource = Object.extend({
             return this.lookup(entity[config.syntax.metaKey]._r);
         }
     },
-    validate:function(path, value) {
+    validate:function(path, value, metadata) {
         var validator = ObjectPath.get(this.validators, path);
         var validation;
         if (!validator) {
@@ -51,7 +51,7 @@ var Resource = module.exports.Resource = Object.extend({
             }
         }
         else {
-            validation = validator(value);
+            validation = validator(value, metadata);
         }
         return validation;
     },
