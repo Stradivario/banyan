@@ -17,7 +17,7 @@ var Store = Object.extend({
         this.graph = {};
         return this;
     },
-    upgradePatch:function(patch, options) {
+    upgrade:function(patch, options) {
         var thiz = this;
         traverse(patch).forEach(function() {
             if (this.notRoot&&shared.Entity.isEntity(this.node)) {
@@ -52,24 +52,26 @@ var Store = Object.extend({
             throw "Cannot put patch in store because a guid could not be determined.";
         }
 
-        this.upgradePatch(patch);
         var entity = this.graph[guid];
 
         if (!entity) {
             entity = shared.Entity.getProxy(patch);
             var resource = shared.Resource.forEntity(entity);
             if (resource) {
-                extend(true, entity, resource.entityTemplate);
+                extend(true, entity, resource.entityTemplate, patch);
             }
-            shared.Entity.applyPatch(entity, patch);
+            else {
+                extend(true, entity, patch);
+            }
+            this.upgrade(entity);
             this.track(entity);
         }
         else if (shared.Entity.isVersionPatch(patch)) {
             shared.Entity.applyPatch(entity, patch);
         }
         else {
+            this.upgrade(patch);
             var versionCheck = shared.Entity.checkVersion(entity, patch);
-
             if (versionCheck===shared.Entity.VERSION_AHEAD) {
                 this.closeObservers(entity);
                 shared.Entity.strip(entity);

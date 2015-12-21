@@ -29,6 +29,19 @@ var Resource = module.exports.Resource = Object.extend({
         if (resource.resourceName in Resource.registry) {
             throw "Cannot register a resource under the name "+resource.resourceName+" because this name already exists in the resource registry."
         }
+        var newEntityTemplate = extend(true, {}, resource.entityTemplate);
+        traverse(newEntityTemplate).forEach(function(value) {
+            if (this.key===config.syntax.metaKey) {
+                this.remove();
+            }
+            else {
+                return;
+            }
+        });
+        newEntityTemplate[config.syntax.metaKey] = {};
+        newEntityTemplate[config.syntax.metaKey]._r = resource.resourceName;
+        resource.newEntityTemplate = newEntityTemplate;
+
         Resource.registry[resource.resourceName] = resource;
     },
     lookup:function(name) {
@@ -84,6 +97,9 @@ var Resource = module.exports.Resource = Object.extend({
         entityProxy[config.syntax.metaKey] = {};
         entityProxy[config.syntax.metaKey]._r = resourceName;
         return entityProxy;
+    },
+    buildNewEntity:function() {
+        return extend(true, {}, this.newEntityTemplate);
     }
 })
 
@@ -195,36 +211,44 @@ var Entity = module.exports.Entity = Object.extend({
         }
     },
     applyPatch:function(entity, patch, options) {
-        for (var key in patch) {
-            if (key===config.syntax.idKey) {
-                continue;
+        var thiz = this;
+        traverse(patch).forEach(function(value) {
+            var path = Path.buildPath(this.path);
+            if (this.isRoot) {
+                return;
             }
-            var value = patch[key];
-            if (_.isArray(value)) {
-                value.forEach(function(splice) {
+            else if (path === config.syntax.idKey) {
+                return;
+            }
+            else if (_.isArray(value)) {
+                value.forEach(function (splice) {
                     var index = splice[0];
                     var removedCount = splice[1];
-                    var addedValues = splice[2]
-                    this.getValueAtPath(entity, key).splice(index, removedCount, addedValues);
-                }.bind(this))
+                    var addedValues = splice[2];
+                    [].splice.apply(thiz.getValueAtPath(entity, path), [index, removedCount].concat(addedValues));
+                })
+                this.remove(true);
+                return;
+            }
+            else if (thiz.isEntity(value)) {
+                thiz.setValueAtPath(entity, path, value);
+                this.remove(true);
+                return;
+            }
+            if (this.notLeaf) {
+                return;
+            }
+            // Per logic in traverse, it seems a leaf object is an empty object
+            if (_.isObject(value)) {
+                return;
+            }
+            if (value === config.syntax.deletionToken) {
+                thiz.setValueAtPath(entity, path, undefined);
             }
             else {
-                if (value===config.syntax.deletionToken) {
-                    this.setValueAtPath(entity, key, undefined);
-                }
-                else if (_.isObject(value)) {
-                    if (this.isEntity(value)) {
-                        this.setValueAtPath(entity, key, value);
-                    }
-                    else {
-                        extend(true, this.getOrCreateValueAtPath(entity, key, {}), value);
-                    }
-                }
-                else {
-                    this.setValueAtPath(entity, key, value);
-                }
+                thiz.setValueAtPath(entity, path, value);
             }
-        }
+        })
     }
 })
 
