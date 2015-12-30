@@ -134,8 +134,9 @@ var Store = Object.extend({
             var valid = true;
             var add = function(value, key) {
                 var extendedPath = shared.Path.joinPath(path, key);
-                var validation = resource.validate(extendedPath, value, shared.Entity.getMetaData(entity, extendedPath));
-                if (validation.state===shared.Resource.validationStates.valid) {
+                var metadata = shared.Entity.getMetaData(entity, extendedPath);
+                var validation = resource.validate(extendedPath, value, metadata);
+                if (!metadata._ignore&&validation.state===shared.Resource.validationStates.valid) {
                     if (shared.Entity.isEntity(value)) {
                         patch[extendedPath] = shared.Entity.getProxy(value);
                     }
@@ -153,8 +154,9 @@ var Store = Object.extend({
                 var extendedPath = shared.Path.joinPath(path, key);
                 var oldValue = getOldValue(key);
                 this.closeObservers(oldValue);
-                var validation = resource.validate(extendedPath, value, shared.Entity.getMetaData(entity, extendedPath));
-                if (validation.state===shared.Resource.validationStates.valid) {
+                var metadata = shared.Entity.getMetaData(entity, extendedPath);
+                var validation = resource.validate(extendedPath, value, metadata);
+                if (!metadata._ignore&&validation.state===shared.Resource.validationStates.valid) {
                     if (shared.Entity.isEntity(value)) {
                         patch[extendedPath] = shared.Entity.getProxy(value);
                     }
@@ -170,8 +172,9 @@ var Store = Object.extend({
             }.bind(this);
             var remove = function(value, key) {
                 var extendedPath = shared.Path.joinPath(path, key);
-                var validation = resource.validate(extendedPath, undefined, shared.Entity.getMetaData(entity, extendedPath));
-                if (validation.state===shared.Resource.validationStates.valid) {
+                var metadata = shared.Entity.getMetaData(entity, extendedPath);
+                var validation = resource.validate(extendedPath, undefined, metadata);
+                if (!metadata._ignore&&validation.state===shared.Resource.validationStates.valid) {
                     var oldValue = getOldValue(key);
                     this.closeObservers(oldValue);
                     patch[extendedPath] = config.syntax.deletionToken;
@@ -186,7 +189,7 @@ var Store = Object.extend({
             _.each(changed, change);
             _.each(removed, remove);
 
-            if (valid) {
+            if (valid&& !_.isEmpty(patch)) {
                 patch[config.syntax.idKey] = entity[config.syntax.idKey];
                 patch[config.syntax.versionKey] = entity[config.syntax.versionKey];
                 patch[config.syntax.metaKey] = _.pick(entity[config.syntax.metaKey], "_r");
