@@ -10,7 +10,7 @@ var Dispatcher = Object.extend({
     initialize:function(options) {
         return this;
     },
-    route:function(operations, options) {
+    route:function(operations) {
         var process = function(operation) {
             var registeredResource = shared.Resource.lookup(operation[config.syntax.metaKey]._r);
             var operationKey = operation[config.syntax.metaKey]._op;

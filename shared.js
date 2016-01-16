@@ -98,8 +98,8 @@ var Resource = module.exports.Resource = Object.extend({
         entityProxy[config.syntax.metaKey]._r = resourceName;
         return entityProxy;
     },
-    buildNewEntity:function() {
-        return extend(true, {}, this.newEntityTemplate);
+    buildNewEntity:function(data) {
+        return extend(true, {}, this.newEntityTemplate, data?(_.omit(data, config.syntax.metaKey)):{});
     }
 })
 
@@ -221,12 +221,20 @@ var Entity = module.exports.Entity = Object.extend({
                 return;
             }
             else if (_.isArray(value)) {
-                value.forEach(function (splice) {
-                    var index = splice[0];
-                    var removedCount = splice[1];
-                    var addedValues = splice[2];
-                    [].splice.apply(thiz.getValueAtPath(entity, path), [index, removedCount].concat(addedValues));
-                })
+                var target = thiz.getValueAtPath(entity, path);
+                // TODO this is a very limited way of checking whether an array describes a splice
+                if (_.isArray(value[0])) {
+                    value.forEach(function (splice) {
+                        var index = splice[0];
+                        var removedCount = splice[1];
+                        var addedValues = splice[2];
+                        [].splice.apply(target, [index, removedCount].concat(addedValues));
+                    })
+                }
+                else {
+                    target.length = 0;
+                    [].splice.apply(target, [0, 0].concat(value));
+                }
                 this.remove(true);
                 return;
             }
