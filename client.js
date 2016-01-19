@@ -192,9 +192,9 @@ var Store = Object.extend({
             if (valid&& !_.isEmpty(patch)) {
                 patch[config.syntax.idKey] = entity[config.syntax.idKey];
                 patch[config.syntax.versionKey] = entity[config.syntax.versionKey];
-                patch[config.syntax.metaKey] = _.pick(entity[config.syntax.metaKey], "_r");
-                patch[config.syntax.metaKey]._op = shared.Resource.patch;
-                dispatcher.queueOutbound(patch);
+                resource.patch({
+                    data:patch
+                })
             }
         }.bind(this));
         return observer;
@@ -202,6 +202,7 @@ var Store = Object.extend({
     buildArrayObserver:function(entity, path, options) {
         var array = shared.Entity.getValueAtPath(entity, path);
         var observer = new Observe.ArrayObserver(array);
+        var resource = shared.Resource.forEntity(entity);
         observer.open(function(splices) {
             var patch = {};
             patch[path] = splices.map(function(splice) {
@@ -231,9 +232,9 @@ var Store = Object.extend({
             }.bind(this))
             patch[config.syntax.idKey] = entity[config.syntax.idKey];
             patch[config.syntax.versionKey] = entity[config.syntax.versionKey];
-            patch[config.syntax.metaKey] = _.pick(entity[config.syntax.metaKey], "_r");
-            patch[config.syntax.metaKey]._op = shared.Resource.patch;
-            dispatcher.queueOutbound(patch);
+            resource.patch({
+                data:patch
+            })
         }.bind(this));
         return observer;
     },
@@ -288,8 +289,9 @@ var Dispatcher = Object.extend({
             operation:operation,
             deferred:deferred
         });
-        // TODO add more configurability here so all changes are not immediately flushed
-        this.flushOutbound();
+        if (!options.wait) {
+            this.flushOutbound();
+        }
         return deferred.promise;
     },
     queueInbound:function(operation, options) {
@@ -362,24 +364,31 @@ var Dispatcher = Object.extend({
 var dispatcher = module.exports.dispatcher = Dispatcher.new();
 
 var ResourceMixin = module.exports.ResourceMixin = Object.extend({
-    fetchLocal:function(fetch, options) {
-        var overlay = {}
-        overlay[config.syntax.metaKey] = {};
-        overlay[config.syntax.metaKey]._r = this.resourceName;
-        return store.get(extend(true, {}, fetch, overlay), options)
+    fetchLocal:function(options) {
+        var operation = this.buildOperation();
+        return store.get(extend(true, {}, _.pick(options, "query"), operation), options)
     },
-    fetchRemote:function(operation, fetch, options) {
-        var overlay = {}
-        overlay[config.syntax.metaKey] = {};
-        overlay[config.syntax.metaKey]._r = this.resourceName;
-        overlay[config.syntax.metaKey]._op = operation;
-        return dispatcher.queueOutbound(extend(true, {}, fetch, overlay));
+    fetchRemote:function(options) {
+        options = extend(
+            true,
+            {
+                wait:false
+            },
+            options
+        );
+        var operation = this.buildOperation(options.operation);
+        return dispatcher.queueOutbound(extend(true, {}, _.pick(options, "query"), operation), options);
     },
-    patchNew:function(patch, options) {
-        var overlay = {}
-        overlay[config.syntax.metaKey] = {};
-        overlay[config.syntax.metaKey]._r = this.resourceName;
-        return dispatcher.queueOutbound(extend(true, {}, patch, overlay));
+    patch:function(options) {
+        options = extend(
+            true,
+            {
+                wait:false
+            },
+            options
+        );
+        var operation = this.buildOperation();
+        return dispatcher.queueOutbound(extend(true, {}, options.data, operation), options);
     }
 })
 

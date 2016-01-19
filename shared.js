@@ -9,8 +9,10 @@ var extend = require("node.extend");
 var config = require("./config.js");
 
 var Resource = module.exports.Resource = Object.extend({
-    patch:"patch",
-    fetch:"fetch",
+    operations:{
+        patch:"patch",
+        fetch:"fetch"
+    },
     registry:{},
     validationStates:{
         valid:"valid",
@@ -97,6 +99,15 @@ var Resource = module.exports.Resource = Object.extend({
         entityProxy[config.syntax.metaKey] = {};
         entityProxy[config.syntax.metaKey]._r = resourceName;
         return entityProxy;
+    },
+    buildOperation:function(key) {
+        var operation = {};
+        operation[config.syntax.metaKey] = {};
+        operation[config.syntax.metaKey]._r = this.resourceName;
+        if (key) {
+            operation[config.syntax.metaKey]._op = key;
+        }
+        return operation;
     },
     buildNewEntity:function(data) {
         return extend(true, {}, this.newEntityTemplate, data?(_.omit(data, config.syntax.metaKey)):{});

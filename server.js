@@ -14,7 +14,7 @@ var Dispatcher = Object.extend({
         var process = function(operation) {
             var registeredResource = shared.Resource.lookup(operation[config.syntax.metaKey]._r);
             var operationKey = operation[config.syntax.metaKey]._op;
-            operationKey = operationKey||shared.Resource.patch;
+            operationKey = operationKey||shared.Resource.operations.patch;
             return registeredResource[operationKey](operation)
                 /*
                 .fail(function(e) {
