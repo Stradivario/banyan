@@ -369,26 +369,14 @@ var ResourceMixin = module.exports.ResourceMixin = Object.extend({
         return store.get(extend(true, {}, _.pick(options, "query"), operation), options)
     },
     fetchRemote:function(options) {
-        options = extend(
-            true,
-            {
-                wait:false
-            },
-            options
-        );
-        var operation = this.buildOperation(options.operation);
-        return dispatcher.queueOutbound(extend(true, {}, _.pick(options, "query"), operation), options);
+        options = options||{};
+        var operation = this.buildOperation(options.operation, _.pick(options, "query"));
+        return dispatcher.queueOutbound(operation, options);
     },
     patch:function(options) {
-        options = extend(
-            true,
-            {
-                wait:false
-            },
-            options
-        );
-        var operation = this.buildOperation();
-        return dispatcher.queueOutbound(extend(true, {}, options.data, operation), options);
+        options = options||{};
+        var operation = this.buildOperation(shared.Resource.patch, options.data);
+        return dispatcher.queueOutbound(operation, options);
     },
     getPrimaryEntity:function(results) {
         if (_.isArray(results)) {

@@ -100,14 +100,29 @@ var Resource = module.exports.Resource = Object.extend({
         entityProxy[config.syntax.metaKey]._r = resourceName;
         return entityProxy;
     },
-    buildOperation:function(key) {
+    buildOperation:function(key, data) {
+        var thiz = this;
         var operation = {};
+        traverse(data).forEach(function(value) {
+            if (this.isRoot) {
+                return;
+            }
+            else if (Entity.isEntity(value)) {
+                this.update(Entity.getProxy(value));
+            }
+            else if (this.key===config.syntax.versionKey||this.key===config.syntax.idKey) {
+                return;
+            }
+            else if (this.key===config.syntax.metaKey) {
+                this.update(_.pick(value, "_r"), true)
+            }
+        });
         operation[config.syntax.metaKey] = {};
         operation[config.syntax.metaKey]._r = this.resourceName;
         if (key) {
             operation[config.syntax.metaKey]._op = key;
         }
-        return operation;
+        return extend(true, {}, data, operation)
     },
     buildNewEntity:function(data) {
         return extend(true, {}, this.newEntityTemplate, data?(_.omit(data, config.syntax.metaKey)):{});
