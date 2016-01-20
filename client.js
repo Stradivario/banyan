@@ -389,6 +389,19 @@ var ResourceMixin = module.exports.ResourceMixin = Object.extend({
         );
         var operation = this.buildOperation();
         return dispatcher.queueOutbound(extend(true, {}, options.data, operation), options);
+    },
+    getPrimaryEntity:function(results) {
+        if (_.isArray(results)) {
+            if (results.length>0) {
+                return results[0];
+            }
+            else {
+                return undefined;
+            }
+        }
+        else {
+            return results;
+        }
     }
 })
 
