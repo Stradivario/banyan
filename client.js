@@ -24,7 +24,8 @@ var Store = Object.extend({
                 var guid = shared.Entity.getGuid(this.node);
                 var trackedEntity = thiz.graph[guid];
                 if (!trackedEntity) {
-                    trackedEntity = this.node;
+                    var resource = shared.Resource.forEntity(this.node);
+                    trackedEntity = extend(true, {}, resource.entityTemplate, this.node);
                     thiz.graph[guid] = trackedEntity;
                 }
                 this.update(trackedEntity, true);
