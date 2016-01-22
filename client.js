@@ -35,7 +35,12 @@ var Store = Object.extend({
     discardObservations:function(root, options) {
         traverse(root).forEach(function(value) {
             if (this.key==="_observer") {
-                value.discardChanges();
+                try {
+                    value.discardChanges();
+                }
+                catch (e) {
+                    log.error(e);
+                }
             }
         })
     },
@@ -338,12 +343,7 @@ var Dispatcher = Object.extend({
                     return this.flushInbound();
                 }.bind(this))
                 .fail(function(e) {
-                    var message = "Operation set failed round trip to server."
-                    log.error(message);
-                    throw {
-                        message:message,
-                        operations:operations
-                    }
+                    log.error("Operation set failed round trip to server.");
                 });
         }
         else {
@@ -379,17 +379,28 @@ var ResourceMixin = module.exports.ResourceMixin = Object.extend({
         var operation = this.buildOperation(shared.Resource.patch, options.data);
         return dispatcher.queueOutbound(operation, options);
     },
-    getPrimaryEntity:function(results) {
+    getPrimaryEntities:function(results) {
         if (_.isArray(results)) {
-            if (results.length>0) {
-                return results[0];
+            return results.filter(function(result) {
+                return this.resourceName===result[config.syntax.metaKey]._r;
+            }.bind(this))
+        }
+        else {
+            return results;
+        }
+    },
+    getPrimaryEntity:function(results) {
+        var primaryResults = this.getPrimaryEntities(results);
+        if (_.isArray(primaryResults)) {
+            if (primaryResults.length>0) {
+                return primaryResults[0];
             }
             else {
                 return undefined;
             }
         }
         else {
-            return results;
+            return primaryResults;
         }
     }
 })
