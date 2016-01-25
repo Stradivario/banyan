@@ -32,25 +32,6 @@ var Store = Object.extend({
             }
         })
     },
-    discardObservations:function(root, options) {
-        traverse(root).forEach(function(value) {
-            if (this.key==="_observer") {
-                try {
-                    value.discardChanges();
-                }
-                catch (e) {
-                    log.error(e);
-                }
-            }
-        })
-    },
-    closeObservers:function(root, options) {
-        traverse(root).forEach(function(value) {
-            if (this.key==="_observer") {
-                value.close();
-            }
-        })
-    },
     put:function(patch, options) {
         var thiz = this;
         var guid = shared.Entity.getGuid(patch);
@@ -106,6 +87,28 @@ var Store = Object.extend({
         else {
             return undefined;
         }
+    },
+    discardObservations:function(root, options) {
+        traverse(root).forEach(function(value) {
+            if (this.key==="_observer") {
+                try {
+                    value.discardChanges();
+                }
+                catch (e) {
+                    log.error(e);
+                }
+            }
+        })
+    },
+    closeObservers:function(root, options) {
+        traverse(root).forEach(function(value) {
+            if (this.notRoot&&shared.Entity.isEntity(this.node)) {
+                this.update(this.node, true);
+            }
+            if (this.key==="_observer") {
+                value.close();
+            }
+        })
     },
     buildObservers:function(entity, path, options) {
         var target = shared.Entity.getValueAtPath(entity, path);
