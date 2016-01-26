@@ -142,6 +142,9 @@ var Store = Object.extend({
             var patch = {};
             var valid = true;
             var add = function(value, key) {
+                if (key===config.syntax.metaKey) {
+                    return;
+                }
                 var extendedPath = shared.Path.joinPath(path, key);
                 var metadata = shared.Entity.getMetaData(entity, extendedPath);
                 var validation = resource.validate(extendedPath, value, metadata);
@@ -160,6 +163,9 @@ var Store = Object.extend({
                 ObjectPath.set(entity, shared.Path.joinPath(shared.Path.buildMetadataPath(extendedPath), config.syntax.validationPath), validation);
             }.bind(this);
             var change = function(value, key) {
+                if (key===config.syntax.metaKey) {
+                    return;
+                }
                 var extendedPath = shared.Path.joinPath(path, key);
                 var oldValue = getOldValue(key);
                 this.closeObservers(oldValue);
@@ -180,6 +186,9 @@ var Store = Object.extend({
                 ObjectPath.set(entity, shared.Path.joinPath(shared.Path.buildMetadataPath(extendedPath), config.syntax.validationPath), validation);
             }.bind(this);
             var remove = function(value, key) {
+                if (key===config.syntax.metaKey) {
+                    return;
+                }
                 var extendedPath = shared.Path.joinPath(path, key);
                 var metadata = shared.Entity.getMetaData(entity, extendedPath);
                 var validation = resource.validate(extendedPath, undefined, metadata);
