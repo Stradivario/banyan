@@ -126,6 +126,12 @@ var Resource = module.exports.Resource = Object.extend({
     },
     buildNewEntity:function(data) {
         return extend(true, {}, this.newEntityTemplate, data?(_.omit(data, config.syntax.metaKey)):{});
+    },
+    patchExistingEntity:function(entity, data) {
+        return Entity.applyPatch(entity, data);
+    },
+    getEntityProxy:function (entity) {
+        return Entity.getProxy(entity);
     }
 })
 
