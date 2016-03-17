@@ -290,6 +290,7 @@ var Store = Object.extend({
         delete this.graph[guid];
     }
 })
+
 var store = module.exports.store = Store.new();
 
 var Dispatcher = Object.extend({
@@ -374,7 +375,7 @@ var Dispatcher = Object.extend({
     }
 });
 
-var dispatcher = module.exports.dispatcher = Dispatcher.new();
+var dispatcher = module.exports.dispatcher = module.exports.dispatcher?module.exports.dispatcher:Dispatcher.new();
 
 var ResourceMixin = module.exports.ResourceMixin = Object.extend({
     fetchLocal:function(options) {
