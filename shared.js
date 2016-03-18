@@ -151,6 +151,14 @@ var Entity = module.exports.Entity = Object.extend({
             return ObjectPath.get(entity, metadataPath)||{};
         }
     },
+    getValidator:function(entity, path) {
+        var metadata = Entity.getMetaData(entity, path);
+        return metadata._validator;
+    },
+    getComparator:function(entity, path) {
+        var metadata = Entity.getMetaData(entity, path);
+        return metadata._comparator;
+    },
     isEntity:function(object) {
         return (_.isObject(object))
             && (config.syntax.idKey in object)
