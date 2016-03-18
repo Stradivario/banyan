@@ -18,7 +18,7 @@ var Resource = module.exports.Resource = Object.extend({
         valid:"valid",
         invalid:"invalid"
     },
-    validators:Object.extend({}),
+    comparators:{},
     resourceName:undefined,
     entityTemplate:{},
     register:function(resource, options) {
@@ -58,7 +58,7 @@ var Resource = module.exports.Resource = Object.extend({
         }
     },
     validate:function(path, value, metadata) {
-        var validator = ObjectPath.get(this.validators, path);
+        var validator = metadata._validator;
         var validation;
         if (!validator) {
             validation = {
