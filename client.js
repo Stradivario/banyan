@@ -1,3 +1,7 @@
+if (!global._banyan) {
+    global._banyan = {};
+}
+
 require("node-polyfill");
 
 var log = require("loglevel");
@@ -291,7 +295,7 @@ var Store = Object.extend({
     }
 })
 
-var store = module.exports.store = Store.new();
+var store = module.exports.store = _banyan.store = _banyan.store?_banyan.store:Store.new();
 
 var Dispatcher = Object.extend({
     initialize:function(options) {
@@ -375,7 +379,7 @@ var Dispatcher = Object.extend({
     }
 });
 
-var dispatcher = module.exports.dispatcher = module.exports.dispatcher?module.exports.dispatcher:Dispatcher.new();
+var dispatcher = module.exports.dispatcher = _banyan.dispatcher = _banyan.dispatcher?_banyan.dispatcher:Dispatcher.new();
 
 var ResourceMixin = module.exports.ResourceMixin = Object.extend({
     fetchLocal:function(options) {
