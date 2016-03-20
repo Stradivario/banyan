@@ -58,7 +58,7 @@ var Resource = module.exports.Resource = Object.extend({
         }
     },
     validate:function(path, value, metadata) {
-        var validator = metadata._validator;
+        var validator = metadata.validator;
         var validation;
         if (!validator) {
             validation = {
@@ -153,11 +153,11 @@ var Entity = module.exports.Entity = Object.extend({
     },
     getValidator:function(entity, path) {
         var metadata = Entity.getMetaData(entity, path);
-        return metadata._validator;
+        return metadata.validator;
     },
     getComparator:function(entity, path) {
         var metadata = Entity.getMetaData(entity, path);
-        return metadata._comparator;
+        return metadata.comparator;
     },
     isEntity:function(object) {
         return (_.isObject(object))
