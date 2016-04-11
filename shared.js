@@ -125,7 +125,12 @@ var Resource = module.exports.Resource = Object.extend({
         return extend(true, {}, data, operation)
     },
     buildNewEntity:function(data) {
-        return extend(true, {}, this.newEntityTemplate, data?(_.omit(data, config.syntax.metaKey)):{});
+        var entity = extend(true, {}, this.newEntityTemplate, data?(_.omit(data, config.syntax.metaKey)):{});
+        var now = new Date().getTime();
+        entity.created = now;
+        entity.modified = now;
+        entity[config.syntax.versionKey] = 1;
+        return entity;
     },
     patchExistingEntity:function(entity, data) {
         return Entity.applyPatch(entity, data);
