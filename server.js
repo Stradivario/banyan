@@ -16,7 +16,6 @@ var Dispatcher = Object.extend({
             var operationKey = operation[config.syntax.metaKey]._op;
             operationKey = operationKey||shared.Resource.operations.patch;
             return registeredResource[operationKey](operation)
-                /*
                 .fail(function(e) {
                     // TODO
                     // need to determine where to handle errors such as version mismatches, and how to return
@@ -30,7 +29,6 @@ var Dispatcher = Object.extend({
                         operation:operation
                     }
                 })
-                */
         }.bind(this);
 
         if (_.isArray(operations)) {

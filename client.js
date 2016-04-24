@@ -359,9 +359,6 @@ var Dispatcher = Object.extend({
                     }.bind(this))
                     return this.flushInbound();
                 }.bind(this))
-                .fail(function(e) {
-                    log.error("Operation set failed round trip to server.");
-                });
         }
         else {
             return q();
@@ -382,6 +379,9 @@ var Dispatcher = Object.extend({
 var dispatcher = module.exports.dispatcher = _banyan.dispatcher = _banyan.dispatcher?_banyan.dispatcher:Dispatcher.new();
 
 var ResourceMixin = module.exports.ResourceMixin = Object.extend({
+    refreshAuth:function() {
+        return q();
+    },
     fetchLocal:function(options) {
         var operation = this.buildOperation();
         return store.get(extend(true, {}, _.pick(options, "query"), operation), options)
@@ -389,12 +389,20 @@ var ResourceMixin = module.exports.ResourceMixin = Object.extend({
     fetchRemote:function(options) {
         options = options||{};
         var operation = this.buildOperation(options.operation, _.pick(options, "query"));
-        return dispatcher.queueOutbound(operation, options);
+        return this
+            .refreshAuth()
+            .then(function() {
+                return dispatcher.queueOutbound(operation, options);
+            })
     },
     patch:function(options) {
         options = options||{};
         var operation = this.buildOperation(shared.Resource.patch, options.data);
-        return dispatcher.queueOutbound(operation, options);
+        return this
+            .refreshAuth()
+            .then(function() {
+                return dispatcher.queueOutbound(operation, options);
+            })
     },
     getPrimaryEntities:function(results) {
         if (_.isArray(results)) {
