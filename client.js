@@ -96,10 +96,14 @@ var Store = Object.extend({
             if (this.key==="_observer") {
                 try {
                     value.discardChanges();
+                    this.stop();
                 }
                 catch (e) {
                     log.error(e);
                 }
+            }
+            else if (this.notRoot&&shared.Entity.isEntity(value)) {
+                this.stop();
             }
         })
     },
