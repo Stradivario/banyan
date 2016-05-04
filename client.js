@@ -101,9 +101,6 @@ var Store = Object.extend({
                     log.error(e);
                 }
             }
-            else if (shared.Entity.isEntity(value)) {
-                return false;
-            }
         })
     },
     closeObservers:function(root, options) {
