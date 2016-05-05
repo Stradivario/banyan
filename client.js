@@ -80,7 +80,6 @@ var Store = Object.extend({
         }
 
         this.discardObservations(entity);
-        Platform.performMicrotaskCheckpoint();
         return q(entity);
     },
     get:function(fetch, options) {
@@ -370,13 +369,18 @@ var Dispatcher = Object.extend({
     },
     flushInbound:function(options) {
         var items = this.inQueue.dequeueAll();
-        return q.all(items.map(function(item) {
-            return store
-                .put(item.operation)
-                .then(function(entity) {
-                    item.deferred.resolve(entity);
-                });
-        }.bind(this)))
+        return q
+            .all(items.map(function(item) {
+                return store
+                    .put(item.operation)
+                    .then(function(entity) {
+                        item.deferred.resolve(entity);
+                    });
+            }.bind(this)))
+            .then(function(results) {
+                Platform.performMicrotaskCheckpoint();
+                return results;
+            })
     }
 });
 
