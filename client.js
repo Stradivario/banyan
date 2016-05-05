@@ -80,6 +80,7 @@ var Store = Object.extend({
         }
 
         this.discardObservations(entity);
+        Platform.performMicrotaskCheckpoint();
         return q(entity);
     },
     get:function(fetch, options) {
