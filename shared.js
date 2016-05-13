@@ -28,8 +28,8 @@ var Resource = module.exports.Resource = Object.extend({
             }.bind(this));
             return;
         }
-        if (resource.resourceName in Resource.registry) {
-            throw "Cannot register a resource under the name "+resource.resourceName+" because this name already exists in the resource registry."
+        if ((resource.resourceName in Resource.registry)&&(!(Resource.registry[resource.resourceName].isPrototypeOf(resource)))) {
+            throw "Cannot register a resource under the name "+resource.resourceName+" because this name already exists in the resource registry, and the corresponding resource is not a prototype of the passes resource argument."
         }
         var newEntityTemplate = extend(true, {}, resource.entityTemplate);
         traverse(newEntityTemplate).forEach(function(value) {
