@@ -137,6 +137,9 @@ var Resource = module.exports.Resource = Object.extend({
     },
     getEntityProxy:function (entity) {
         return Entity.getProxy(entity);
+    },
+    getMetadata:function(path) {
+        return Entity.getMetaData(this.entityTemplate, path);
     }
 })
 
