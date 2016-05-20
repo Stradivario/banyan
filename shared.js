@@ -102,8 +102,7 @@ var Resource = module.exports.Resource = Object.extend({
     },
     buildOperation:function(key, data) {
         var thiz = this;
-        var operation = {};
-        traverse(data).forEach(function(value) {
+        var operation = traverse(data).map(function(value) {
             if (this.isRoot) {
                 return;
             }
@@ -122,7 +121,7 @@ var Resource = module.exports.Resource = Object.extend({
         if (key) {
             operation[config.syntax.metaKey]._op = key;
         }
-        return extend(true, {}, data, operation)
+        return operation;
     },
     buildNewEntity:function(data) {
         var entity = extend(true, {}, this.newEntityTemplate, data?(_.omit(data, config.syntax.metaKey)):{});
