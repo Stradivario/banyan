@@ -392,11 +392,11 @@ var ResourceMixin = module.exports.ResourceMixin = Object.extend({
     },
     fetchLocal:function(options) {
         var operation = this.buildOperation();
-        return store.get(extend(true, {}, _.pick(options, "query", "filterSet"), operation), options)
+        return store.get(extend(true, {}, _.omit(options, "operation"), operation), options)
     },
     fetchRemote:function(options) {
         options = options||{};
-        var operation = this.buildOperation(options.operation, _.pick(options, "query", "filterSet"));
+        var operation = this.buildOperation(options.operation, _.omit(options, "operation"));
         return this
             .refreshAuth()
             .then(function() {
