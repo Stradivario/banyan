@@ -102,6 +102,7 @@ var Resource = module.exports.Resource = Object.extend({
     },
     buildOperation:function(key, data) {
         var thiz = this;
+        data = data||{};
         var operation = traverse(data).map(function(value) {
             if (this.isRoot) {
                 return;
