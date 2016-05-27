@@ -375,6 +375,7 @@ var Dispatcher = Object.extend({
                     .put(item.operation)
                     .then(function(entity) {
                         item.deferred.resolve(entity);
+                        return entity;
                     });
             }.bind(this)))
             .then(function(results) {
