@@ -388,25 +388,16 @@ var Dispatcher = Object.extend({
 var dispatcher = module.exports.dispatcher = _banyan.dispatcher = _banyan.dispatcher?_banyan.dispatcher:Dispatcher.new();
 
 var ResourceMixin = module.exports.ResourceMixin = Object.extend({
+    register:function(resource, options) {
+        extend(resource, this.buildFetchers(resource));
+        shared.Resource.register.call(this, resource, options);
+    },
     refreshAuth:function() {
         return q();
     },
-    fetchLocal:function(options) {
-        var operation = this.buildOperation();
-        return store.get(extend(true, {}, _.omit(options, "operation"), operation), options)
-    },
-    fetchRemote:function(options) {
+    send:function(options) {
         options = options||{};
-        var operation = this.buildOperation(options.operation, _.omit(options, "operation"));
-        return this
-            .refreshAuth()
-            .then(function() {
-                return dispatcher.queueOutbound(operation, options);
-            })
-    },
-    patch:function(options) {
-        options = options||{};
-        var operation = this.buildOperation(shared.Resource.patch, options.data);
+        var operation = this.buildOperation(this.getOperationKey(options.operation), _.omit(options, "operation"));
         return this
             .refreshAuth()
             .then(function() {
@@ -436,7 +427,34 @@ var ResourceMixin = module.exports.ResourceMixin = Object.extend({
         else {
             return primaryResults;
         }
+    },
+    patch:function(options) {
+        options = options || {};
+        options.operation = shared.Resource.operations.patch;
+        return this.send(options);
+    },
+    fetchOne:function(options) {
+        return this
+            .send(options)
+            .then(this.getPrimaryEntity.bind(this))
+    },
+    fetchSome:function(options) {
+        return this
+            .send(options)
+            .then(this.getPrimaryEntities.bind(this))
+    },
+    buildFetchers:function(resource) {
+        return _.mapObject(resource.operations, function(spec, operation) {
+            var args = spec.args||[];
+            return function() {
+                var options = arguments[args.length]||{};
+                options.operation = operation;
+                options.query = options.query||{};
+                for (var i=0; i<args.length; i++) {
+                    options.query[args[i]] = arguments[i];
+                }
+                return spec.unique?resource.fetchOne(options):resource.fetchSome(options);
+            }
+        })
     }
 })
-
-

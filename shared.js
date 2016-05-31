@@ -140,6 +140,14 @@ var Resource = module.exports.Resource = Object.extend({
     },
     getMetadata:function(path) {
         return Entity.getMetaData(this.entityTemplate, path);
+    },
+    getOperationKey:function(spec) {
+        if (spec.key) {
+            return spec.key
+        }
+        else {
+            return spec;
+        }
     }
 })
 
