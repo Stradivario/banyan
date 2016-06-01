@@ -444,7 +444,7 @@ var ResourceMixin = module.exports.ResourceMixin = Object.extend({
             .then(this.getPrimaryEntities.bind(this))
     },
     buildFetchers:function(resource) {
-        return _.mapObject(resource.operations, function(spec, operation) {
+        return _.mapObject(_.omit(resource.operations, "patch"), function(spec, operation) {
             var args = spec.args||[];
             return function() {
                 var options = arguments[args.length]||{};
