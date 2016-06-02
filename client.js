@@ -397,7 +397,7 @@ var ResourceMixin = module.exports.ResourceMixin = Object.extend({
     },
     send:function(options) {
         options = options||{};
-        var operation = this.buildOperation(this.getOperationKey(options.operation), _.omit(options, "operation"));
+        var operation = this.buildOperation(this.getOperationKey(options.operation), options.data||_.omit(options, "operation"));
         return this
             .refreshAuth()
             .then(function() {
