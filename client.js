@@ -433,6 +433,11 @@ var ResourceMixin = module.exports.ResourceMixin = Object.extend({
         options.operation = shared.Resource.operations.patch;
         return this.send(options);
     },
+    create:function(data) {
+        return this.patch({
+            data:data
+        });
+    },
     fetchOne:function(options) {
         return this
             .send(options)
