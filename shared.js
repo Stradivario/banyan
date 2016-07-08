@@ -100,6 +100,11 @@ var Resource = module.exports.Resource = Object.extend({
         entityProxy[config.syntax.metaKey]._r = resourceName;
         return entityProxy;
     },
+    buildPatchFromFetch:function(fetch) {
+        var patchData = traverse(fetch.query).map(function(value) {
+        })
+        return this.buildOperation(this.operations.patch, patchData);
+    },
     buildOperation:function(key, data) {
         var thiz = this;
         data = data||{};

@@ -16,6 +16,7 @@ var traverse = require("traverse");
 var ObjectPath = require("object-path");
 var extend = require("node.extend");
 
+// TODO _ignore processing should be deprecated, it was never a clean solution
 var Store = Object.extend({
     initialize:function(options) {
         this.graph = {};
