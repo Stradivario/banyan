@@ -94,6 +94,9 @@ var Resource = module.exports.Resource = Object.extend({
             resourceName = arguments[0];
             id = arguments[1];
         }
+        if (_.isObject(id)) {
+            id = id.id;
+        }
         var entityProxy = {};
         entityProxy[config.syntax.idKey] = id;
         entityProxy[config.syntax.metaKey] = {};
