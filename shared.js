@@ -211,7 +211,7 @@ var Entity = module.exports.Entity = Object.extend({
         }
     },
     getVersionPatch:function(entity) {
-        var versionPatch = _.pick(entity, config.syntax.metaKey, config.syntax.versionKey, config.syntax.idKey);
+        var versionPatch = extend(true, {}, _.pick(entity, config.syntax.metaKey, config.syntax.versionKey, config.syntax.idKey));
         versionPatch[config.syntax.metaKey][config.syntax.versionKey] = entity[config.syntax.versionKey];
         return versionPatch;
     },
