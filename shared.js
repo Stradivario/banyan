@@ -135,8 +135,8 @@ var Resource = module.exports.Resource = Object.extend({
     buildNewEntity:function(data) {
         var entity = extend(true, {}, this.newEntityTemplate, data?(_.omit(data, config.syntax.metaKey)):{});
         var now = new Date().getTime();
-        entity.created = now;
-        entity.modified = now;
+        entity.created = data.created||now;
+        entity.modified = data.modified||now;
         entity[config.syntax.versionKey] = 1;
         return entity;
     },
