@@ -341,7 +341,7 @@ var Dispatcher = Object.extend({
                     type:"POST",
                     data:JSON.stringify(operations, function(key, value) {
                         if (key===config.syntax.metaKey) {
-                            return _.pick(value, "_r", "_op");
+                            return _.pick(value, "_r", "_op", "_query");
                         }
                         else {
                             return value;

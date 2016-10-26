@@ -122,10 +122,12 @@ var Resource = module.exports.Resource = Object.extend({
                 return;
             }
             else if (this.key===config.syntax.metaKey) {
-                this.update(_.pick(value, "_r"), true)
+                this.update(_.pick(value, "_r", "_query"))
             }
         });
-        operation[config.syntax.metaKey] = {};
+        if (!operation[config.syntax.metaKey]) {
+            operation[config.syntax.metaKey] = {};
+        }
         operation[config.syntax.metaKey]._r = this.resourceName;
         if (key) {
             operation[config.syntax.metaKey]._op = key;
