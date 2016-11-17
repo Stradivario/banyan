@@ -287,7 +287,7 @@ var Entity = module.exports.Entity = Object.extend({
                 return;
             }
             else if (_.isArray(value)) {
-                var target = thiz.getValueAtPath(entity, path);
+                var target = thiz.getOrCreateValueAtPath(entity, path, []);
                 // TODO this is a very limited way of checking whether an array describes a splice
                 if (_.isArray(value[0])) {
                     value.forEach(function (splice) {
