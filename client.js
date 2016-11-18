@@ -20,8 +20,10 @@ var extend = require("node.extend");
 var Store = Object.extend({
     initialize:function(options) {
         this.graph = {};
+        this.pendingPatches = {};
         return this;
     },
+
     upgrade:function(patch, options) {
         var thiz = this;
         traverse(patch).forEach(function() {
@@ -147,7 +149,13 @@ var Store = Object.extend({
         var observer = new Observe.ObjectObserver(object);
         var resource = shared.Resource.forEntity(entity);
         observer.open(function(added, removed, changed, getOldValue) {
-            var patch = {};
+            var patch = this.pendingPatches[entity[config.syntax.idKey]];
+            if (!patch) {
+                patch = {};
+                patch[config.syntax.idKey] = entity[config.syntax.idKey];
+                patch[config.syntax.versionKey] = entity[config.syntax.versionKey];
+                this.pendingPatches[entity[config.syntax.idKey]] = patch;
+            }
             var valid = true;
             var add = function(value, key) {
                 if (key===config.syntax.metaKey) {
@@ -216,11 +224,15 @@ var Store = Object.extend({
             _.each(removed, remove);
 
             if (valid&& !_.isEmpty(patch)) {
-                patch[config.syntax.idKey] = entity[config.syntax.idKey];
-                patch[config.syntax.versionKey] = entity[config.syntax.versionKey];
-                resource.patch({
-                    data:patch
-                })
+                _.defer(function() {
+                    var pendingPatch = this.pendingPatches[entity[config.syntax.idKey]];
+                    if (pendingPatch) {
+                        resource.patch({
+                            data:pendingPatch
+                        });
+                        delete this.pendingPatches[entity[config.syntax.idKey]]
+                    }
+                }.bind(this))
             }
         }.bind(this));
         return observer;
@@ -230,7 +242,13 @@ var Store = Object.extend({
         var observer = new Observe.ArrayObserver(array);
         var resource = shared.Resource.forEntity(entity);
         observer.open(function(splices) {
-            var patch = {};
+            var patch = this.pendingPatches[entity[config.syntax.idKey]];
+            if (!patch) {
+                patch = {};
+                patch[config.syntax.idKey] = entity[config.syntax.idKey];
+                patch[config.syntax.versionKey] = entity[config.syntax.versionKey];
+                this.pendingPatches[entity[config.syntax.idKey]] = patch;
+            }
             patch[path] = splices.map(function(splice) {
                 var index = splice.index;
                 var removed = splice.removed;
@@ -256,11 +274,15 @@ var Store = Object.extend({
                     }.bind(this))
                 ]
             }.bind(this))
-            patch[config.syntax.idKey] = entity[config.syntax.idKey];
-            patch[config.syntax.versionKey] = entity[config.syntax.versionKey];
-            resource.patch({
-                data:patch
-            })
+            _.defer(function() {
+                var pendingPatch = this.pendingPatches[entity[config.syntax.idKey]];
+                if (pendingPatch) {
+                    resource.patch({
+                        data:pendingPatch
+                    })
+                    delete this.pendingPatches[entity[config.syntax.idKey]]
+                }
+            }.bind(this))
         }.bind(this));
         return observer;
     },
