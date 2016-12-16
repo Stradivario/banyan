@@ -327,6 +327,8 @@ var Dispatcher = Object.extend({
     initialize:function(options) {
         this.inQueue = Queue.new();
         this.outQueue = Queue.new();
+        this.pendingOutboundFlush = false;
+        this.activeOutboundFlush = false;
         return this;
     },
     setEndpoint:function(endpoint) {
@@ -352,13 +354,20 @@ var Dispatcher = Object.extend({
         return deferred.promise;
     },
     flushOutbound:function(options) {
-        var items = this.outQueue.dequeueAll();
-        if (items.length>0) {
+        var count = this.outQueue.getLength();
+        var items = this.outQueue.peekAll();
+        if (this.activeOutboundFlush) {
+            this.pendingOutboundFlush = true;
+        }
+        else if (items.length>0) {
+            this.activeOutboundFlush = true;
+            this.pendingOutboundFlush = false;
             var operations = items.map(function(item) {
                 return item.operation;
             });
             return q($
                 .ajax({
+                    timeout:30000,
                     url:this.endpoint,
                     type:"POST",
                     data:JSON.stringify(operations, function(key, value) {
@@ -382,8 +391,23 @@ var Dispatcher = Object.extend({
                         else {
                             items[index].deferred.resolve(this.queueInbound(result));
                         }
-                    }.bind(this))
-                    return this.flushInbound();
+                    }.bind(this));
+                    this.outQueue.dequeueSome(count);
+                    return this
+                        .flushInbound()
+                        .then(function(result) {
+                            this.activeOutboundFlush = false;
+                            if (this.pendingOutboundFlush) {
+                                this.flushOutbound();
+                            }
+                            return result;
+                        }.bind(this));
+                }.bind(this))
+                .fail(function(err) {
+                    this.activeOutboundFlush = false;
+                    if (this.pendingOutboundFlush) {
+                        this.flushOutbound();
+                    }
                 }.bind(this))
         }
         else {

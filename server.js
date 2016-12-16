@@ -31,8 +31,33 @@ var Dispatcher = Object.extend({
                 })
         }.bind(this);
 
+        /*
+        TODO
+        The sequence enforcement below is crude, it forces serial execution of batched operations always, and it only really
+        guarantees a deterministic result for operations batched in a single request.  It does not make any 100% guarantee
+        even for a single user making multiple requests that overlap each other, which may happen in a weak network
+        environment, where request A and B on the same entity may be made in sequence on the client but may reach the server
+        close enough in time that the findExisting+updateExisting database statements fo the two requests intersect.  This may
+        cause the version query on one of these to turn up nothing in the findExisting.  In this case, *even though* on the
+        client the operation completion indicator for the second operation will show, it does not imply the first operation
+        also completed.  This scenario may be rare, since findExisting and updateExisting are fast operations, but there is
+        no guarantee.
+         */
         if (_.isArray(operations)) {
-            return q.all(operations.map(process))
+
+            return operations.reduce(function (promises, currentOperation) {
+                return promises
+                    .then(function(results) {
+                        return [
+                            results,
+                            process(currentOperation)
+                        ]
+                    })
+                    .spread(function(results, result) {
+                        results.push(result);
+                        return results;
+                    })
+            }, q([]));
         }
         else {
             return process(operations);

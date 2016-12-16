@@ -43,10 +43,18 @@ module.exports = Object.extend({
 
     dequeueAll:function() {
         // if the queue is empty, return immediately
-        if (this.queue.length == 0) return [];
-        var items = this.queue.slice(0).reverse();
+        if (this.queue.length <= this.offset) return [];
+        var items = this.queue.slice(this.offset);
         this.offset = 0;
         this.queue = [];
+        return items;
+    },
+
+    dequeueSome:function(count) {
+        if (this.queue.length <=this.offset) return [];
+        var items = this.queue.slice(this.offset, this.offset+count);
+        this.offset+=count;
+        this.resize();
         return items;
     },
 
@@ -61,12 +69,8 @@ module.exports = Object.extend({
         // store the item at the front of the queue
         var item = this.queue[this.offset];
 
-        // increment the offset and remove the free space if necessary
-        if (++ this.offset * 2 >= this.queue.length){
-            this.queue  = this.queue.slice(this.offset);
-            this.offset = 0;
-        }
-
+        this.offset++;
+        this.resize();
         // return the dequeued item
         return item;
 
@@ -77,6 +81,22 @@ module.exports = Object.extend({
      */
     peek:function() {
         return (this.queue.length > 0 ? this.queue[this.offset] : undefined);
+    },
+
+    peekAll:function() {
+        // if the queue is empty, return immediately
+        if (this.queue.length<=this.offset) return [];
+        return this.queue.slice(this.offset);
+    },
+    resize:function() {
+        if (this.offset>=this.queue.length) {
+            this.queue = [];
+            this.offset = 0;
+        }
+        else if (this.offset * 2 >= this.queue.length){
+            this.queue  = this.queue.slice(this.offset);
+            this.offset = 0;
+        }
     }
 
 });
