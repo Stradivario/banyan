@@ -252,10 +252,10 @@ var Entity = module.exports.Entity = Object.extend({
                 return;
             }
             else if (this.key==="._observer") {
-                this.remove();
+                this.remove(true);
             }
             else if (thiz.isEntity(value)||!(_.isObject(value))) {
-                this.remove();
+                this.remove(true);
             }
         })
     },
@@ -323,6 +323,18 @@ var Entity = module.exports.Entity = Object.extend({
                 thiz.setValueAtPath(entity, path, value);
             }
         })
+    },
+    snip:function(entity) {
+        var thiz = this;
+        var entities = [entity];
+        traverse(entity).forEach(function() {
+            if (this.notRoot&&thiz.isEntity(this.node)) {
+                entities.push(thiz.snip(this.node))
+                var proxy = thiz.getProxy(this.node);
+                this.update(proxy, true);
+            }
+        })
+        return _.flatten(entities);
     }
 })
 

@@ -31,14 +31,20 @@ var Store = Object.extend({
                 var guid = shared.Entity.getGuid(this.node);
                 var trackedEntity = thiz.graph[guid];
                 if (!trackedEntity) {
-                    var resource = shared.Resource.forEntity(this.node);
-                    trackedEntity = extend(true, {}, resource.entityTemplate, this.node);
-                    thiz.graph[guid] = trackedEntity;
+                    trackedEntity = thiz.put(this.node);
                 }
                 this.update(trackedEntity, true);
             }
         })
     },
+    patch:function(patch, options) {
+        var snippedPatches = shared.Entity.snip(patch);
+        var snippedEntities = snippedPatches.map(function(snippedPatch) {
+            return this.put(snippedPatch, options);
+        }.bind(this));
+        return snippedEntities[0];
+    },
+
     put:function(patch, options) {
         var thiz = this;
         var guid = shared.Entity.getGuid(patch);
@@ -46,44 +52,51 @@ var Store = Object.extend({
             throw "Cannot put patch in store because a guid could not be determined.";
         }
 
-        var entity = this.graph[guid];
-
-        if (!entity) {
-            entity = shared.Entity.getProxy(patch);
-            var resource = shared.Resource.forEntity(entity);
-            if (resource) {
-                extend(true, entity, resource.entityTemplate, patch);
+        if (shared.Entity.isVersionPatch(patch)) {
+            var entity = this.graph[guid];
+            if (entity) {
+                shared.Entity.applyPatch(entity, patch);
             }
             else {
-                extend(true, entity, patch);
+                throw "Cannot apply a version patch if entity does not already exist in store.";
             }
-            this.upgrade(entity);
-            this.track(entity);
-        }
-        else if (shared.Entity.isVersionPatch(patch)) {
-            shared.Entity.applyPatch(entity, patch);
         }
         else {
-            this.upgrade(patch);
-            var versionCheck = shared.Entity.checkVersion(entity, patch);
-            if (versionCheck===shared.Entity.VERSION_AHEAD) {
-                this.closeObservers(entity);
-                shared.Entity.strip(entity);
-                var resource = shared.Resource.forEntity(entity);
-                if (resource) {
-                    extend(true, entity, resource.entityTemplate);
+            var entity = this.graph[guid];
+
+            if (entity) {
+                var versionCheck = shared.Entity.checkVersion(entity, patch);
+                if (versionCheck === shared.Entity.VERSION_AHEAD) {
+                    this.closeObservers(entity);
+                    shared.Entity.strip(entity);
+                    var resource = shared.Resource.forEntity(entity);
+                    if (resource) {
+                        extend(true, entity, resource.entityTemplate);
+                    }
+                }
+
+                shared.Entity.applyPatch(entity, patch);
+                this.upgrade(entity);
+
+                if (versionCheck === shared.Entity.VERSION_AHEAD) {
+                    this.buildObservers(entity, "");
                 }
             }
-
-            shared.Entity.applyPatch(entity, patch);
-
-            if (versionCheck===shared.Entity.VERSION_AHEAD) {
-                this.buildObservers(entity, "");
+            else {
+                entity = shared.Entity.getProxy(patch);
+                var resource = shared.Resource.forEntity(entity);
+                if (resource) {
+                    extend(true, entity, resource.entityTemplate, patch);
+                }
+                else {
+                    extend(true, entity, patch);
+                }
+                this.upgrade(entity);
+                this.track(entity);
             }
         }
-
         this.discardObservations(entity);
-        return q(entity);
+        return entity;
     },
     get:function(fetch, options) {
         var guid = shared.Resource.buildGuid(fetch[config.syntax.idKey], fetch[config.syntax.metaKey]._r);
@@ -418,8 +431,7 @@ var Dispatcher = Object.extend({
         var items = this.inQueue.dequeueAll();
         return q
             .all(items.map(function(item) {
-                return store
-                    .put(item.operation)
+                return q(store.patch(item.operation))
                     .then(function(entity) {
                         item.deferred.resolve(entity);
                         return entity;
