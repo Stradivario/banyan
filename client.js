@@ -39,12 +39,15 @@ var Store = Object.extend({
     },
     patch:function(patch, options) {
         var snippedPatches = shared.Entity.snip(patch);
-        var snippedEntities = snippedPatches.map(function(snippedPatch) {
-            return this.put(snippedPatch, options);
-        }.bind(this));
+        var snippedEntities = snippedPatches
+            .filter(function(snippedPatch) {
+                return !shared.Entity.isProxy(snippedPatch);
+            }.bind(this))
+            .map(function(snippedPatch) {
+                return this.put(snippedPatch, options);
+            }.bind(this));
         return snippedEntities[0];
     },
-
     put:function(patch, options) {
         var thiz = this;
         var guid = shared.Entity.getGuid(patch);

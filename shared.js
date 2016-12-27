@@ -191,6 +191,16 @@ var Entity = module.exports.Entity = Object.extend({
             && (config.syntax.metaKey in object)
             && (object[config.syntax.metaKey]._r);
     },
+    // TODO this is a somewhat inefficient and potentially error prone way to test for a proxy
+    isProxy:function(object) {
+        var keys = _.keys(object);
+        if (keys.length<=3&&this.isEntity(object)) {
+            return true;
+        }
+        else {
+            return false;
+        }
+    },
     getGuid:function(entity) {
         return Resource.buildGuid(entity[config.syntax.metaKey]._r, entity[config.syntax.idKey]);
     },
@@ -326,15 +336,24 @@ var Entity = module.exports.Entity = Object.extend({
     },
     snip:function(entity) {
         var thiz = this;
-        var entities = [entity];
+        var entities = [];
         traverse(entity).forEach(function() {
             if (this.notRoot&&thiz.isEntity(this.node)) {
-                entities.push(thiz.snip(this.node))
-                var proxy = thiz.getProxy(this.node);
+                var proxy;
+                if (thiz.isProxy(this.node)) {
+                    proxy = this.node;
+                }
+                else {
+                    var proxy = thiz.getProxy(this.node);
+                    var snippedEntity = thiz.snip(this.node);
+                    delete snippedEntity[config.syntax.versionKey];
+                    entities.push(snippedEntity);
+                }
+                delete proxy[config.syntax.versionKey];
                 this.update(proxy, true);
             }
         })
-        return _.flatten(entities);
+        return _.flatten([entity, entities]);
     }
 })
 
