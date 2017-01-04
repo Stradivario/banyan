@@ -78,8 +78,10 @@ var Store = Object.extend({
                     }
                 }
 
-                shared.Entity.applyPatch(entity, patch);
-                this.upgrade(entity);
+                if (versionCheck !== shared.Entity.VERSION_BEHIND) {
+                    shared.Entity.applyPatch(entity, patch);
+                    this.upgrade(entity);
+                }
 
                 if (versionCheck === shared.Entity.VERSION_AHEAD) {
                     this.buildObservers(entity, "");
