@@ -122,7 +122,7 @@ var Resource = module.exports.Resource = Object.extend({
                 return;
             }
             else if (this.key===config.syntax.metaKey) {
-                this.update(_.pick(value, "_r", "_query"))
+                this.update(_.pick(value, "_r", "_query", "_copy"))
             }
         });
         if (!operation[config.syntax.metaKey]) {
