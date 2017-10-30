@@ -388,6 +388,7 @@ var Dispatcher = Object.extend({
                     timeout:30000,
                     url:this.endpoint,
                     type:"POST",
+                    headers:JSON.parse(localStorage.getItem("banyanHeaders")),
                     data:JSON.stringify(operations, function(key, value) {
                         if (key===config.syntax.metaKey) {
                             return _.pick(value, "_r", "_op", "_query", "_copy");
